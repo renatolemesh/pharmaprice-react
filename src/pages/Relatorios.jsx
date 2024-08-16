@@ -79,7 +79,9 @@ const Relatorios = () => {
   const exportToExcel = async () => {
     try {
       const data = await exportReportData(filters);
-      const formattedData = formatDataForExport(data.data);
+      const formattedData = filters.priceType === 'current' 
+        ? formatDataForExport(data.data) 
+        : formatHistoricalDataForExport(data.data);
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
@@ -92,7 +94,9 @@ const Relatorios = () => {
   const exportToCSV = async () => {
     try {
       const data = await exportReportData(filters);
-      const formattedData = formatDataForExport(data.data);
+      const formattedData = filters.priceType === 'current' 
+        ? formatDataForExport(data.data) 
+        : formatHistoricalDataForExport(data.data);
       const csv = convertToCSV(formattedData);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
@@ -114,6 +118,22 @@ const Relatorios = () => {
       Preços: item.preco,
       Datas: formatarDataBrasileira(item.data),
     }));
+  };
+
+  const formatHistoricalDataForExport = (data) => {
+    const formattedData = [];
+    data.forEach(item => {
+      item.precos.forEach(preco => {
+        formattedData.push({
+          Farmácia: item.nome_farmacia,
+          Descrição: item.descricao,
+          EAN: item.EAN,
+          Preço: preco.preco,
+          Data: formatarDataBrasileira(preco.data),
+        });
+      });
+    });
+    return formattedData;
   };
 
   const formatarDataBrasileira = (data) => {

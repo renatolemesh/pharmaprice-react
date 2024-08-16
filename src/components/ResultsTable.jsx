@@ -47,12 +47,14 @@ const ResultsTable = ({ results, selectedPharmacies = [], type }) => {
     setSortedResults(sortResults(results, sortColumn, sortDirection));
   }, [results, sortColumn, sortDirection]);
 
-  // Gera o parâmetro para farmácias selecionadas
-  const generatePharmacyParam = () => {
-    if (selectedPharmacies && selectedPharmacies.length > 0) {
-      return selectedPharmacies.join('+');
+  // Função para alternar a coluna e direção de ordenação
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-    return '';
   };
 
   return (
@@ -60,31 +62,31 @@ const ResultsTable = ({ results, selectedPharmacies = [], type }) => {
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr>
-            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => setSortColumn('nome_farmacia')}>
+            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => handleSort('nome_farmacia')}>
               FARMÁCIA
               {sortColumn === 'nome_farmacia' && (
                 <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
               )}
             </th>
-            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => setSortColumn('descricao')}>
+            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => handleSort('descricao')}>
               DESCRIÇÃO
               {sortColumn === 'descricao' && (
                 <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
               )}
             </th>
-            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => setSortColumn('EAN')}>
+            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => handleSort('EAN')}>
               EAN
               {sortColumn === 'EAN' && (
                 <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
               )}
             </th>
-            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => setSortColumn('preco')}>
+            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => handleSort('preco')}>
               PREÇO
               {sortColumn === 'preco' && (
                 <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
               )}
             </th>
-            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => setSortColumn('data')}>
+            <th className="border border-gray-300 px-4 py-2 cursor-pointer" onClick={() => handleSort('data')}>
               DATA
               {sortColumn === 'data' && (
                 <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
