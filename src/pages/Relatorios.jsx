@@ -155,7 +155,7 @@ const Relatorios = () => {
       <div className="flex space-x-4 mt-4">
         <button
           onClick={exportToExcel}
-          className="px-4 py-2 bg-green-600 text-white rounded-md"
+          className="ml-5 px-4 py-2 bg-green-600 text-white rounded-md"
         >
           Exportar para Excel
         </button>
