@@ -80,3 +80,23 @@ export const exportReportData = async (filters) => {
     throw error;
   }
 };
+
+// New function for fetching descriptions
+export const fetchDescriptions = async (query) => {
+  const queryParams = { descricao: query }; // Adjust as per your API requirements
+
+  try {
+    const data = await fetchData('descricoes', queryParams);
+    return data; // Assuming the API returns an array of descriptions
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const fetchFilteredDescriptions = async (query) => {
+  const response = await fetch(`http://127.0.0.1:8000/api/descricoes?descricao=${encodeURIComponent(query)}`);
+  if (!response.ok) {
+    throw new Error('Erro ao buscar descrições');
+  }
+  return await response.json();
+};
