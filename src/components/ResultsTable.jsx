@@ -1,3 +1,4 @@
+import { ConstructionIcon } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 const ResultsTable = ({ results, selectedPharmacies = [], type }) => {
@@ -7,12 +8,9 @@ const ResultsTable = ({ results, selectedPharmacies = [], type }) => {
 
   // Função para formatar a data no formato DD/MM/AAAA
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+    const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
-  };
+};
 
   // Função para ordenar os resultados
   const sortResults = (results, column, direction) => {

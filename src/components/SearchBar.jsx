@@ -1,60 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { fetchFilteredDescriptions } from '../services/Api';
-import { saveDescriptions, fetchDescriptions } from '../services/Db';
-
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import debounce from 'lodash.debounce';
+import { fetchFilteredDescriptions, fetchDescriptions } from '../services/Api';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const suggestionsRef = useRef(null);
 
   useEffect(() => {
     const loadDescriptions = async () => {
       try {
-        const data = await fetchDescriptions(); // Carrega do IndexedDB
+        const data = await fetchFilteredDescriptions();
         setSuggestions(data);
       } catch (error) {
-        console.error('Error fetching from IndexedDB:', error);
+        console.error('Error fetching from api:', error);
       }
     };
 
     loadDescriptions();
   }, []);
 
-  const handleSearch = () => {
-    if (!query.trim()) {
+  const handleSearch = (searchQuery, searchType) => {
+    if (!searchQuery.trim()) {
       setErrorMessage('Por favor, preencha o campo de pesquisa.');
       return;
     }
 
     setErrorMessage('');
-
-    // Verifica se a consulta é numérica e tem entre 5 e 15 caracteres (típico de EAN)
-    const isEan = /^\d{5,15}$/.test(query);
-    const searchType = isEan ? 'ean' : 'descricao';
-
-    onSearch(query, searchType);
+    onSearch(searchQuery, searchType);
   };
 
-  const handleSuggestionClick = async (suggestion) => {
-    setQuery(suggestion.descricao); // Define a descrição clicada como a consulta
+  const handleSuggestionClick = (suggestion) => {
+    setQuery(suggestion.descricao);
     setSuggestions([]); // Limpa as sugestões após a seleção
+    handleSearch(suggestion.descricao, 'descricao'); // Pesquisa diretamente
   };
 
-  const handleQueryChange = async (e) => {
-    setQuery(e.target.value);
-    
-    if (e.target.value.length > 2) {
-      try {
-        const data = await fetchFilteredDescriptions(e.target.value); // Busca sob demanda
-        setSuggestions(data);
-      } catch (error) {
-        console.error('Error fetching filtered descriptions:', error);
-      }
-    } else {
-      setSuggestions([]); // Limpa sugestões se a consulta for curta
+  const fetchSuggestions = async (value) => {
+    if (value.length <= 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    try {
+      const data = await fetchFilteredDescriptions(value);
+      setSuggestions(data);
+    } catch (error) {
+      console.error('Error fetching filtered descriptions:', error);
     }
   };
+
+  const debouncedFetchSuggestions = useCallback(
+    debounce(fetchSuggestions, 1000),
+    []
+  );
+
+  const handleQueryChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    debouncedFetchSuggestions(value);
+  };
+
+  // Fecha as sugestões se clicar fora
+  const handleClickOutside = (e) => {
+    if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
+      setSuggestions([]); // Limpa as sugestões
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col p-4">
@@ -63,11 +83,11 @@ const SearchBar = ({ onSearch }) => {
           type="text"
           placeholder="Pesquisar..."
           value={query}
-          onChange={handleQueryChange} // Usa a nova função
+          onChange={handleQueryChange}
           className="flex-grow px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
         <button
-          onClick={handleSearch}
+          onClick={() => handleSearch(query, /^\d{5,15}$/.test(query) ? 'ean' : 'descricao')}
           className="px-4 py-2 bg-blue-600 text-white rounded-r-md focus:outline-none"
         >
           Pesquisar
@@ -77,14 +97,14 @@ const SearchBar = ({ onSearch }) => {
         <p className="text-red-500 mt-2">{errorMessage}</p>
       )}
       {suggestions.length > 0 && (
-        <ul className="border mt-2 rounded-md max-h-60 overflow-y-auto">
+        <ul ref={suggestionsRef} className="border mt-2 rounded-md max-h-60 overflow-y-auto">
           {suggestions.map((suggestion, index) => (
             <li
               key={index}
-              onClick={() => handleSuggestionClick(suggestion)} // Passa o objeto completo
+              onClick={() => handleSuggestionClick(suggestion)}
               className="p-2 hover:bg-blue-100 cursor-pointer"
             >
-              {suggestion.descricao} {/* Acessa a propriedade descricao */}
+              {suggestion.descricao}
             </li>
           ))}
         </ul>
