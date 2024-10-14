@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const pharmacies = [
   { name: "Raia", value: 1 },
   { name: "Nissei", value: 2 },
   { name: "Morifarma", value: 3 },
   { name: "Unipreco", value: 4 },
-  { name: "Callfarma", value: 5 }
+  { name: "Callfarma", value: 5 },
+  { name: "Preço Popular", value: 6 },
+  { name: "Panvel", value: 7 },
+  { name: "Pague menos", value: 8 }
 ];
 
-const ReportFilter = ({ onGenerateReport, onSearch }) => {
+const ReportFilter = ({ onGenerateReport }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
@@ -16,6 +19,7 @@ const ReportFilter = ({ onGenerateReport, onSearch }) => {
   const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showPharmacyDropdown, setShowPharmacyDropdown] = useState(false);
+  const dropdownRef = useRef(null); // Referência para o dropdown
 
   const handlePharmacyChange = (pharmacy) => {
     setSelectedPharmacies(prevSelected => 
@@ -29,6 +33,20 @@ const ReportFilter = ({ onGenerateReport, onSearch }) => {
     setErrorMessage('');
     onGenerateReport({ startDate, endDate, selectedPharmacies, priceType, query });
   };
+
+  // Função para lidar com cliques fora do dropdown
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setShowPharmacyDropdown(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="p-4 bg-white shadow rounded-md">
@@ -45,7 +63,7 @@ const ReportFilter = ({ onGenerateReport, onSearch }) => {
           onChange={(e) => setEndDate(e.target.value)}
           className="px-4 py-2 border rounded-md"
         />
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}> {/* Adiciona a referência aqui */}
           <button
             onClick={() => setShowPharmacyDropdown(!showPharmacyDropdown)}
             className="px-4 py-2 border rounded-md"
