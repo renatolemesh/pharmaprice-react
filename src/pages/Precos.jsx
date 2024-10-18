@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import SearchBar from '../components/SearchBar';
 import ResultsTable from '../components/ResultsTable';
 import { fetchPrecos } from '../services/Api';
+import Pagination from '../components/Pagination';
+
 
 const Precos = () => {
   const [results, setResults] = useState([]);
@@ -16,6 +18,10 @@ const Precos = () => {
   const handleSearch = (query, searchType) => {
     setSearchFilters({ query, searchType });
     setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page); // Atualiza a página atual
   };
 
   useEffect(() => {
@@ -39,12 +45,25 @@ const Precos = () => {
 
   return (
     <div>
+      {/* Botões de exportação */}
       <SearchBar onSearch={handleSearch} />
-      {loading && <p>Carregando...</p>}
-      {!loading && results.length > 0 && (
-        <ResultsTable results={results} />
+      {loading ? (
+        <p>Carregando...</p>
+      ) : (
+        results.length > 0 && (
+          <>
+              <ResultsTable results={results} />
+
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={handlePageChange} 
+            />
+          </>
+        )
       )}
     </div>
+
   );
 };
 

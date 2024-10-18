@@ -61,6 +61,9 @@ const PriceHistoryFilter = ({ onSearch }) => {
           <option value="3">Morifarma</option>
           <option value="4">Unipreco</option>
           <option value="5">Callfarma</option>
+          <option value="6">Preço Popular</option>
+          <option value="7">Panvel</option>
+          <option value="8">Pague menos</option>
         </select>
       </div>
       {errorMessage && (

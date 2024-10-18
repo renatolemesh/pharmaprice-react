@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReportFilter from '../components/Reportfilter';
 import ResultsTable from '../components/ResultsTable';
 import PriceHistoryResults from '../components/PriceHistoryResults';
+import Pagination from '../components/Pagination';
 import * as XLSX from 'xlsx';
 import { CSVLink } from 'react-csv';
 import { fetchReportData, exportReportData } from '../services/Api';
@@ -32,47 +33,29 @@ const Relatorios = () => {
     handleGenerateReport(filters, page);
   };
 
+  const renderResults = () => {
+    if (loading) {
+      return <p>Carregando...</p>;
+    }
+    
+    if (results.length === 0) {
+      return <p>Nenhum resultado encontrado.</p>;
+    }
+
+    return filters.priceType === 'current' ? (
+      <ResultsTable results={results} />
+    ) : (
+      <PriceHistoryResults results={results} />
+    );
+  };
+
   const renderPagination = () => {
-    const renderPages = () => {
-      const pages = [];
-      const startPage = Math.max(currentPage - 2, 1);
-      const endPage = Math.min(startPage + 4, totalPages);
-
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(
-          <button
-            key={i}
-            className={`px-4 py-2 mx-1 ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-            onClick={() => handlePageChange(i)}
-          >
-            {i}
-          </button>
-        );
-      }
-
-      return pages;
-    };
-
     return (
-      <div className="flex justify-center mt-4">
-        {currentPage > 1 && (
-          <button
-            className="px-4 py-2 mx-1 bg-gray-200 rounded"
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            Anterior
-          </button>
-        )}
-        {renderPages()}
-        {currentPage < totalPages && (
-          <button
-            className="px-4 py-2 mx-1 bg-gray-200 rounded"
-            onClick={() => handlePageChange(currentPage + 1)}
-          >
-            Próxima
-          </button>
-        )}
-      </div>
+      <Pagination 
+        currentPage={currentPage} 
+        totalPages={totalPages} 
+        onPageChange={handlePageChange} 
+      />
     );
   };
 
@@ -137,11 +120,8 @@ const Relatorios = () => {
   };
 
   const formatarDataBrasileira = (data) => {
-    const dataObj = new Date(data);
-    const dia = dataObj.getDate().toString().padStart(2, '0');
-    const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
-    const ano = dataObj.getFullYear();
-    return `${dia}/${mes}/${ano}`;
+    const [year, month, day] = data.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   const convertToCSV = (data) => {
@@ -153,34 +133,16 @@ const Relatorios = () => {
   return (
     <div>
       <div className="flex space-x-4 mt-4">
-        <button
-          onClick={exportToExcel}
-          className="ml-5 px-4 py-2 bg-green-600 text-white rounded-md"
-        >
+        <button onClick={exportToExcel} className="ml-5 px-4 py-2 bg-green-600 text-white rounded-md">
           Exportar para Excel
         </button>
-        <button
-          onClick={exportToCSV}
-          className="px-4 py-2 bg-yellow-600 text-white rounded-md"
-        >
+        <button onClick={exportToCSV} className="px-4 py-2 bg-yellow-600 text-white rounded-md">
           Exportar para CSV
         </button>
       </div>
       <ReportFilter onGenerateReport={handleGenerateReport} />
-      {loading ? (
-        <p>Carregando...</p>
-      ) : (
-        results.length > 0 && (
-          <>
-            {filters.priceType === 'current' ? (
-              <ResultsTable results={results} />
-            ) : (
-              <PriceHistoryResults results={results} />
-            )}
-            {renderPagination()}
-          </>
-        )
-      )}
+      {renderResults()}
+      {results.length > 0 && renderPagination()}
     </div>
   );
 };

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import debounce from 'lodash.debounce';
-import { fetchFilteredDescriptions, fetchDescriptions } from '../services/Api';
+import { fetchFilteredDescriptions } from '../services/Api';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef(null);
 
   useEffect(() => {
@@ -28,24 +29,27 @@ const SearchBar = ({ onSearch }) => {
     }
 
     setErrorMessage('');
+    setShowSuggestions(false);
     onSearch(searchQuery, searchType);
+    // Não limpar o campo de pesquisa
   };
 
   const handleSuggestionClick = (suggestion) => {
     setQuery(suggestion.descricao);
-    setSuggestions([]); // Limpa as sugestões após a seleção
-    handleSearch(suggestion.descricao, 'descricao'); // Pesquisa diretamente
+    setShowSuggestions(false);
+    handleSearch(suggestion.descricao, 'descricao');
   };
 
   const fetchSuggestions = async (value) => {
     if (value.length <= 2) {
-      setSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
 
     try {
       const data = await fetchFilteredDescriptions(value);
       setSuggestions(data);
+      setShowSuggestions(true);
     } catch (error) {
       console.error('Error fetching filtered descriptions:', error);
     }
@@ -62,10 +66,9 @@ const SearchBar = ({ onSearch }) => {
     debouncedFetchSuggestions(value);
   };
 
-  // Fecha as sugestões se clicar fora
   const handleClickOutside = (e) => {
     if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
-      setSuggestions([]); // Limpa as sugestões
+      setShowSuggestions(false);
     }
   };
 
@@ -96,7 +99,7 @@ const SearchBar = ({ onSearch }) => {
       {errorMessage && (
         <p className="text-red-500 mt-2">{errorMessage}</p>
       )}
-      {suggestions.length > 0 && (
+      {showSuggestions && suggestions.length > 0 && (
         <ul ref={suggestionsRef} className="border mt-2 rounded-md max-h-60 overflow-y-auto">
           {suggestions.map((suggestion, index) => (
             <li

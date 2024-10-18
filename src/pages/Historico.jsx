@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import PriceHistoryFilter from '../components/PriceHistoryFilter';
 import PriceHistoryResults from '../components/PriceHistoryResults';
 import { fetchPriceHistory } from '../services/Api';
+import Pagination from '../components/Pagination';
 
 const Historico = () => {
   const [results, setResults] = useState([]);
@@ -36,36 +37,17 @@ const Historico = () => {
   };
 
   return (
-    <div>
+
+      <div>
       <PriceHistoryFilter onSearch={handleSearch} />
       {results.length > 0 && (
         <>
           <PriceHistoryResults results={results} />
-          <div className="flex justify-center mt-4">
-            <button
-              className="px-4 py-2 mx-1 bg-gray-200 rounded"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Anterior
-            </button>
-            {[...Array(totalPages).keys()].map((num) => (
-              <button
-                key={num}
-                className={`px-4 py-2 mx-1 ${num + 1 === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                onClick={() => handlePageChange(num + 1)}
-              >
-                {num + 1}
-              </button>
-            ))}
-            <button
-              className="px-4 py-2 mx-1 bg-gray-200 rounded"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Próxima
-            </button>
-          </div>
+          <Pagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={handlePageChange} 
+          />
         </>
       )}
       {loading && <p>Carregando...</p>}
