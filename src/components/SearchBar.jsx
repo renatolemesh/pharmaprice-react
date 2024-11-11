@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import debounce from 'lodash.debounce';
 import { fetchFilteredDescriptions } from '../services/Api';
 
@@ -7,20 +7,33 @@ const SearchBar = ({ onSearch }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const suggestionsRef = useRef(null);
 
-  useEffect(() => {
-    const loadDescriptions = async () => {
+  const loadDescriptions = async (value) => {
+    if (value.length > 2 && !isSearching) {
       try {
-        const data = await fetchFilteredDescriptions();
+        const data = await fetchFilteredDescriptions(value);
         setSuggestions(data);
+        setShowSuggestions(true);
       } catch (error) {
         console.error('Error fetching from api:', error);
       }
-    };
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
 
-    loadDescriptions();
-  }, []);
+  const debouncedLoadDescriptions = useCallback(
+    debounce(loadDescriptions, 1000),
+    [isSearching]
+  );
+
+  useEffect(() => {
+    debouncedLoadDescriptions(query);
+    return debouncedLoadDescriptions.cancel; // Limpa o debounce ao desmontar
+  }, [query]);
 
   const handleSearch = (searchQuery, searchType) => {
     if (!searchQuery.trim()) {
@@ -30,6 +43,7 @@ const SearchBar = ({ onSearch }) => {
 
     setErrorMessage('');
     setShowSuggestions(false);
+    setIsSearching(true);
     onSearch(searchQuery, searchType);
     // Não limpar o campo de pesquisa
   };
@@ -40,30 +54,9 @@ const SearchBar = ({ onSearch }) => {
     handleSearch(suggestion.descricao, 'descricao');
   };
 
-  const fetchSuggestions = async (value) => {
-    if (value.length <= 2) {
-      setShowSuggestions(false);
-      return;
-    }
-
-    try {
-      const data = await fetchFilteredDescriptions(value);
-      setSuggestions(data);
-      setShowSuggestions(true);
-    } catch (error) {
-      console.error('Error fetching filtered descriptions:', error);
-    }
-  };
-
-  const debouncedFetchSuggestions = useCallback(
-    debounce(fetchSuggestions, 1000),
-    []
-  );
-
   const handleQueryChange = (e) => {
     const value = e.target.value;
-    setQuery(value);
-    debouncedFetchSuggestions(value);
+    setQuery(value); // Atualiza o query imediatamente
   };
 
   const handleClickOutside = (e) => {
@@ -78,6 +71,12 @@ const SearchBar = ({ onSearch }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (isSearching) {
+      setIsSearching(false);
+    }
+  }, [query]);
 
   return (
     <div className="flex flex-col p-4">

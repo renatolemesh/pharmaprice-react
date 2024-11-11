@@ -1,4 +1,4 @@
-const BASE_URL = 'http://127.0.0.1:8000/api';
+export const BASE_URL = 'http://127.0.0.1:8000/api';
 
 const fetchData = async (endpoint, queryParams) => {
   const apiUrl = new URL(`${BASE_URL}/${endpoint}`);
@@ -94,9 +94,12 @@ export const fetchDescriptions = async (query) => {
 };
 
 export const fetchFilteredDescriptions = async (query) => {
-  const response = await fetch(`http://127.0.0.1:8000/api/descricoes?descricao=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error('Erro ao buscar descrições');
+  const queryParams = { descricao: query };
+
+  try {
+    const data = await fetchData('descricoes', queryParams);
+    return data; // Supondo que a API retorna um array de descrições
+  } catch (error) {
+    throw error;
   }
-  return await response.json();
 };
