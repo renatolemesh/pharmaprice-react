@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://127.0.0.1:8000/api';
+export const BASE_URL = 'http://200.142.147.154:8002/api';
 
 const fetchData = async (endpoint, queryParams) => {
   const apiUrl = new URL(`${BASE_URL}/${endpoint}`);
