@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://200.142.147.154:8002/api';
+export const BASE_URL = 'https://pharmaprice.shop/api';
 
 const fetchData = async (endpoint, queryParams) => {
   const apiUrl = new URL(`${BASE_URL}/${endpoint}`);
