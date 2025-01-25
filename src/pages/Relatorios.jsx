@@ -45,7 +45,7 @@ const Relatorios = () => {
     if (loading) {
       return (
         <div className="flex items-center justify-center h-screen">
-          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
+          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
         </div>
       );
     }
@@ -179,7 +179,7 @@ const Relatorios = () => {
       {/* Gif de carregamento (só exibe se exportando) */}
       {exporting && (
         <div className="absolute top-4 right-4">
-          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
+          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-13 h-auto" />
         </div>
       )}
 
