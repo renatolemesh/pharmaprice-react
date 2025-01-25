@@ -4,7 +4,6 @@ import ResultsTable from '../components/ResultsTable';
 import { fetchPrecos } from '../services/Api';
 import Pagination from '../components/Pagination';
 
-
 const Precos = () => {
   const [results, setResults] = useState([]);
   const [searchFilters, setSearchFilters] = useState({
@@ -14,10 +13,12 @@ const Precos = () => {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [hasSearched, setHasSearched] = useState(false); // Novo estado para saber se já pesquisou
 
   const handleSearch = (query, searchType) => {
     setSearchFilters({ query, searchType });
     setCurrentPage(1);
+    setHasSearched(true); // Marca que a pesquisa foi feita
   };
 
   const handlePageChange = (page) => {
@@ -27,6 +28,7 @@ const Precos = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+
       try {
         const { resultsData, totalPages } = await fetchPrecos(searchFilters, currentPage);
         setResults(resultsData);
@@ -48,22 +50,29 @@ const Precos = () => {
       {/* Botões de exportação */}
       <SearchBar onSearch={handleSearch} />
       {loading ? (
-        <p>Carregando...</p>
+        <div className="flex items-center justify-center h-screen">
+          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
+        </div>
       ) : (
-        results.length > 0 && (
-          <>
+        hasSearched && ( // Só mostra a mensagem se já foi feito pelo menos uma pesquisa
+          
+          results.length > 0 ? (
+            <>
               <ResultsTable results={results} />
-
-            <Pagination 
-              currentPage={currentPage} 
-              totalPages={totalPages} 
-              onPageChange={handlePageChange} 
-            />
-          </>
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={handlePageChange} 
+              />
+            </>
+          ) : (
+            <div className="flex justify-center items-center h-screen">
+              <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
+            </div>
+          )
         )
       )}
     </div>
-
   );
 };
 

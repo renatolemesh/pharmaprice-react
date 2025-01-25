@@ -5,7 +5,7 @@ import { fetchPriceHistory } from '../services/Api';
 import Pagination from '../components/Pagination';
 
 const Historico = () => {
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState({ data: [] }); // Inicializa como um objeto com a chave 'data'
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0); 
   const [loading, setLoading] = useState(false);
@@ -16,12 +16,14 @@ const Historico = () => {
     endDate: '',
     selectedPharmacy: ''
   });
+  const [hasSearched, setHasSearched] = useState(false); // Marca se já foi feita a pesquisa
 
   const handleSearch = async (query, searchType, startDate, endDate, selectedPharmacy, page = 1) => {
     setLoading(true);
+    setHasSearched(true); // Marca que já fez a pesquisa
     try {
       const data = await fetchPriceHistory(query, searchType, startDate, endDate, selectedPharmacy, page);
-      setResults(data.data);
+      setResults(data); // 'data' já tem a chave 'data' com os resultados
       setCurrentPage(data.current_page);
       setTotalPages(data.last_page);
       setFilters({ query, searchType, startDate, endDate, selectedPharmacy });
@@ -37,20 +39,30 @@ const Historico = () => {
   };
 
   return (
-
-      <div>
+    <div>
       <PriceHistoryFilter onSearch={handleSearch} />
-      {results.length > 0 && (
-        <>
-          <PriceHistoryResults results={results} />
-          <Pagination 
-            currentPage={currentPage} 
-            totalPages={totalPages} 
-            onPageChange={handlePageChange} 
-          />
-        </>
+      {loading ? (
+        <div className="flex items-center justify-center h-screen">
+          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
+        </div>
+      ) : (
+        hasSearched && ( // Só exibe a mensagem ou os resultados se já tiver feito a pesquisa
+          results?.data?.length > 0 ? ( // Verifique se a chave 'data' tem itens
+            <>
+              <PriceHistoryResults results={results.data} />
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={handlePageChange} 
+              />
+            </>
+          ) : (
+            <div className="flex justify-center items-center h-screen">
+              <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
+            </div>
+          )
+        )
       )}
-      {loading && <p>Carregando...</p>}
     </div>
   );
 };

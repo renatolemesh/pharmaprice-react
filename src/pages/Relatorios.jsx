@@ -13,14 +13,22 @@ const Relatorios = () => {
   const [filters, setFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasFetched, setHasFetched] = useState(false); // Novo estado para verificar se a consulta foi feita
+  const [exporting, setExporting] = useState(false); // Novo estado para verificar se estamos exportando
 
   const handleGenerateReport = async (newFilters, page = 1) => {
     setLoading(true);
+    setHasFetched(true); // Marca que a consulta foi realizada
     try {
       const data = await fetchReportData(newFilters, page);
-      setResults(data.data);
-      setCurrentPage(data.current_page);
-      setTotalPages(data.last_page);
+      console.log(data.message)
+      if (data.message == "Nenhum resultado encontrado.") {
+        setResults([]); // Limpa os resultados e exibe a mensagem
+      } else {
+        setResults(data.data);
+        setCurrentPage(data.current_page);
+        setTotalPages(data.last_page);
+      }
       setFilters(newFilters);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
@@ -35,11 +43,19 @@ const Relatorios = () => {
 
   const renderResults = () => {
     if (loading) {
-      return <p>Carregando...</p>;
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
+        </div>
+      );
     }
-    
-    if (results.length === 0) {
-      return <p>Nenhum resultado encontrado.</p>;
+
+    if (results.length === 0 && hasFetched) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+          <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
+        </div>
+      );
     }
 
     return filters.priceType === 'current' ? (
@@ -60,6 +76,7 @@ const Relatorios = () => {
   };
 
   const exportToExcel = async () => {
+    setExporting(true); // Marca que a exportação está em andamento
     try {
       const data = await exportReportData(filters);
       const formattedData = filters.priceType === 'current' 
@@ -71,10 +88,13 @@ const Relatorios = () => {
       XLSX.writeFile(workbook, "relatorio.xlsx");
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
+    } finally {
+      setExporting(false); // Finaliza a exportação
     }
   };
 
   const exportToCSV = async () => {
+    setExporting(true); // Marca que a exportação está em andamento
     try {
       const data = await exportReportData(filters);
       const formattedData = filters.priceType === 'current' 
@@ -90,6 +110,8 @@ const Relatorios = () => {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Erro ao exportar para CSV:', error);
+    } finally {
+      setExporting(false); // Finaliza a exportação
     }
   };
 
@@ -132,15 +154,35 @@ const Relatorios = () => {
 
   return (
     <div>
-      <div className="flex space-x-4 mt-4">
-        <button onClick={exportToExcel} className="ml-5 px-4 py-2 bg-green-600 text-white rounded-md">
-          Exportar para Excel
-        </button>
-        <button onClick={exportToCSV} className="px-4 py-2 bg-yellow-600 text-white rounded-md">
-          Exportar para CSV
-        </button>
-      </div>
+      {/* Botões de exportação acima do filtro */}
       <ReportFilter onGenerateReport={handleGenerateReport} />
+      
+      {results.length > 0 && (
+        <div className="flex justify-end mt-4 space-x-4 mr-5">
+          <button 
+            onClick={exportToExcel} 
+            className="px-4 py-2 bg-green-600 text-white rounded-md"
+            disabled={exporting} // Desabilita o botão durante a exportação
+          >
+            Exportar para Excel
+          </button>
+          <button 
+            onClick={exportToCSV} 
+            className="px-4 py-2 bg-yellow-600 text-white rounded-md"
+            disabled={exporting} // Desabilita o botão durante a exportação
+          >
+            Exportar para CSV
+          </button>
+        </div>
+      )}
+
+      {/* Gif de carregamento (só exibe se exportando) */}
+      {exporting && (
+        <div className="absolute top-4 right-4">
+          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
+        </div>
+      )}
+
       {renderResults()}
       {results.length > 0 && renderPagination()}
     </div>

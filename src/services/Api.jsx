@@ -6,9 +6,13 @@ const fetchData = async (endpoint, queryParams) => {
 
   try {
     const response = await fetch(apiUrl.toString());
+
     if (!response.ok) {
-      throw new Error('Erro ao buscar dados da API');
+      const errorData = await response.json(); // Captura a resposta de erro
+      console.error('Erro na requisição:', errorData);
+      throw new Error(`Erro ao buscar dados da API: ${errorData.message || 'Erro desconhecido'}`);
     }
+
     return await response.json();
   } catch (error) {
     console.error('Erro na requisição:', error);
