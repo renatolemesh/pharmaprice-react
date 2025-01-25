@@ -179,7 +179,7 @@ const Relatorios = () => {
       {/* Gif de carregamento (só exibe se exportando) */}
       {exporting && (
         <div className="absolute top-4 right-4">
-          <img src="public/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
+          <img src="src/assets/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
         </div>
       )}
 
