@@ -51,11 +51,7 @@ const Precos = () => {
       <SearchBar onSearch={handleSearch} />
       {loading ? (
         <div className="flex items-center justify-center h-screen">
-<<<<<<< HEAD
           <img src="/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
-=======
-          <img src="src/assets/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
->>>>>>> 5e604a14b64ed729c2be86ccdd3f9820b7763c4f
         </div>
       ) : (
         hasSearched && ( // Só mostra a mensagem se já foi feito pelo menos uma pesquisa
