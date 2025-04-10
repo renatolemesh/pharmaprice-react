@@ -119,6 +119,7 @@ const Relatorios = () => {
     return data.map(item => ({
       Farmácia: item.nome_farmacia,
       Descrição: item.descricao,
+      Laboratório: item.laboratorio || '',
       EAN: item.EAN,
       Preços: item.preco,
       Datas: formatarDataBrasileira(item.data),
@@ -132,6 +133,7 @@ const Relatorios = () => {
         formattedData.push({
           Farmácia: item.nome_farmacia,
           Descrição: item.descricao,
+          Laboratório: item.laboratorio || '',
           EAN: item.EAN,
           Preço: preco.preco,
           Data: formatarDataBrasileira(preco.data),
