@@ -81,6 +81,10 @@ const ResultsTable = ({ results, selectedPharmacies = [], type }) => {
     if (farmaciaId === 6) {
       return `${baseUrl}/${sanitizedLink}/p`;
     }
+
+    if (sanitizedLink.startsWith('https://www.farmaciasapp.com.br')) {
+      return sanitizedLink;
+    }
     
     return `${baseUrl}/${sanitizedLink}`;
   };
