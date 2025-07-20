@@ -50,6 +50,16 @@ const ReportFilter = ({ onGenerateReport }) => {
 
   return (
     <div className="p-4 bg-white shadow rounded-md">
+      <div className="flex mb-4">
+        <input
+          type="text"
+          placeholder="Pesquisar por descrição"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex-grow px-4 py-2 border rounded-md"
+        />
+        
+      </div>
       <div className="flex space-x-4 mb-4">
         <div className="relative" ref={dropdownRef}> {/* Adiciona a referência aqui */}
           <button
@@ -104,15 +114,6 @@ const ReportFilter = ({ onGenerateReport }) => {
             />
           </>
         )}
-      </div>
-      <div className="flex mb-4">
-        <input
-          type="text"
-          placeholder="Pesquisar por descrição"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-grow px-4 py-2 border rounded-md"
-        />
         <button
           onClick={handleGenerateClick}
           className="px-4 py-2 bg-blue-600 text-white rounded-md ml-2"
