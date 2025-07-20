@@ -18,7 +18,7 @@ const VerticalMenu = ({ onToggleMenu }) => {
       <div className="flex flex-col px-4 py-8">
         <div className="flex flex-col justify-between flex-1">
           {isOpen && (
-            <h2 className="text-3xl font-semibold text-white">PharmaPrice</h2>
+            <img src="/logo.png" alt="Logo" className="w-auto p-1"/>
           )}
           <nav className="mt-6">
             <div onClick={() => navigate('/precos')} className="flex items-center px-4 py-2 text-gray-200 hover:bg-gray-700 hover:text-gray-200 cursor-pointer">
