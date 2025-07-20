@@ -78,7 +78,6 @@ const ResponsivePriceHistoryResults = ({ results }) => {
 
   // Desktop Table Layout
   const DesktopTable = () => {
-    if (window.searched) {
       return (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 min-w-[900px]">
@@ -135,7 +134,6 @@ const ResponsivePriceHistoryResults = ({ results }) => {
           </table>
         </div>
       );
-    }
   };
 
   // Compact Mobile Table (alternative layout)
