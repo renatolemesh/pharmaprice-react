@@ -154,7 +154,7 @@ const ResponsivePriceHistoryResults = ({ results }) => {
                 <div className="flex items-center text-xs text-gray-500">
                   <span className="mr-1">EAN: {result.EAN}</span>
                   <CopyIcon
-                    className={`w-3 h-3 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
+                    className={`w-2 h-2 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
                     onClick={() => copyToClipboard(result.EAN)}
                   />
                 </div>
