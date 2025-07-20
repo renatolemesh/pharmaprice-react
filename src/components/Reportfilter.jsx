@@ -15,7 +15,7 @@ const ReportFilter = ({ onGenerateReport }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
-  const [priceType, setPriceType] = useState('current');
+  const [priceType, setPriceType] = useState('historical');
   const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showPharmacyDropdown, setShowPharmacyDropdown] = useState(false);
@@ -51,18 +51,6 @@ const ReportFilter = ({ onGenerateReport }) => {
   return (
     <div className="p-4 bg-white shadow rounded-md">
       <div className="flex space-x-4 mb-4">
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="px-4 py-2 border rounded-md"
-        />
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="px-4 py-2 border rounded-md"
-        />
         <div className="relative" ref={dropdownRef}> {/* Adiciona a referência aqui */}
           <button
             onClick={() => setShowPharmacyDropdown(!showPharmacyDropdown)}
@@ -95,10 +83,27 @@ const ReportFilter = ({ onGenerateReport }) => {
           value={priceType}
           onChange={(e) => setPriceType(e.target.value)}
           className="px-4 py-2 border rounded-md"
+          id="priceTypeInput"
         >
           <option value="current">Preço Atual</option>
           <option value="historical">Preço Histórico</option>
         </select>
+        {priceType === 'historical' && (
+          <>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-4 py-2 border rounded-md"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-4 py-2 border rounded-md"
+            />
+          </>
+        )}
       </div>
       <div className="flex mb-4">
         <input

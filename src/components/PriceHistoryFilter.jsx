@@ -38,18 +38,6 @@ const PriceHistoryFilter = ({ onSearch }) => {
         </button>
       </div>
       <div className="flex space-x-4">
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
         <select
           value={selectedPharmacy}
           onChange={(e) => setSelectedPharmacy(e.target.value)}
@@ -65,6 +53,18 @@ const PriceHistoryFilter = ({ onSearch }) => {
           <option value="7">Panvel</option>
           <option value="8">Pague menos</option>
         </select>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
       </div>
       {errorMessage && (
         <p className="text-red-500 mt-2">{errorMessage}</p>
