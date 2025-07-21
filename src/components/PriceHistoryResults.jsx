@@ -4,7 +4,6 @@ import { TrendingUpIcon, CalendarIcon, CopyIcon } from 'lucide-react';
 const ResponsivePriceHistoryResults = ({ results }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [copyIconColors, setCopyIconColors] = useState({});
-  let searched = window.searched;
 
   // Check if screen is mobile size
   useEffect(() => {
@@ -77,64 +76,62 @@ const ResponsivePriceHistoryResults = ({ results }) => {
   );
 
   // Desktop Table Layout
-  const DesktopTable = () => {
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300 min-w-[900px]">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Farmácia</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Descrição</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">EAN</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Preços</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Datas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((result, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="border border-gray-300 p-0 align-top">
-                    <div className="px-3 py-2 font-medium">{result.nome_farmacia}</div>
-                  </td>
-                  <td className="border border-gray-300 p-0 align-top">
-                    <div className="px-3 py-2 text-sm max-w-xs">
-                      <div className="line-clamp-3" title={result.descricao}>
-                        {result.descricao}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 p-0 align-top">
-                    <div className="px-3 py-2 text-sm">
-                      <div className="flex items-center">
-                        <span className="mr-2">{result.EAN}</span>
-                        <CopyIcon
-                          className={`w-4 h-4 cursor-pointer flex-shrink-0 ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-                          onClick={() => copyToClipboard(result.EAN)}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 p-0">
-                    {result.precos.map((precoData, i) => (
-                      <div key={i} className={`px-3 py-2 text-sm font-semibold text-green-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                        R$ {precoData.preco}
-                      </div>
-                    ))}
-                  </td>
-                  <td className="border border-gray-300 p-0">
-                    {result.precos.map((precoData, i) => (
-                      <div key={i} className={`px-3 py-2 text-sm text-gray-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                        {formatDate(precoData.data)}
-                      </div>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-  };
+  const DesktopTable = () => (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse border border-gray-300 min-w-[900px]">
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Farmácia</th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Descrição</th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">EAN</th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Preços</th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Datas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((result, index) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="border border-gray-300 p-0 align-top">
+                <div className="px-3 py-2 font-medium">{result.nome_farmacia}</div>
+              </td>
+              <td className="border border-gray-300 p-0 align-top">
+                <div className="px-3 py-2 text-sm max-w-xs">
+                  <div className="line-clamp-3" title={result.descricao}>
+                    {result.descricao}
+                  </div>
+                </div>
+              </td>
+              <td className="border border-gray-300 p-0 align-top">
+                <div className="px-3 py-2 text-sm">
+                  <div className="flex items-center">
+                    <span className="mr-2">{result.EAN}</span>
+                    <CopyIcon
+                      className={`w-4 h-4 cursor-pointer flex-shrink-0 ${copyIconColors[result.EAN] || 'text-gray-500'}`}
+                      onClick={() => copyToClipboard(result.EAN)}
+                    />
+                  </div>
+                </div>
+              </td>
+              <td className="border border-gray-300 p-0">
+                {result.precos.map((precoData, i) => (
+                  <div key={i} className={`px-3 py-2 text-sm font-semibold text-green-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                    R$ {precoData.preco}
+                  </div>
+                ))}
+              </td>
+              <td className="border border-gray-300 p-0">
+                {result.precos.map((precoData, i) => (
+                  <div key={i} className={`px-3 py-2 text-sm text-gray-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                    {formatDate(precoData.data)}
+                  </div>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   // Compact Mobile Table (alternative layout)
   const CompactMobileTable = () => (
@@ -152,7 +149,7 @@ const ResponsivePriceHistoryResults = ({ results }) => {
                 <div className="flex items-center text-xs text-gray-500">
                   <span className="mr-1">EAN: {result.EAN}</span>
                   <CopyIcon
-                    className={`w-2 h-2 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
+                    className={`w-3 h-3 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
                     onClick={() => copyToClipboard(result.EAN)}
                   />
                 </div>
@@ -188,7 +185,7 @@ const ResponsivePriceHistoryResults = ({ results }) => {
     </div>
   );
 
-  if (searched && (!results || results.length === 0)) {
+  if (!results || results.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">
         <TrendingUpIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
@@ -199,6 +196,10 @@ const ResponsivePriceHistoryResults = ({ results }) => {
 
   return (
     <div className="p-2 sm:p-4">
+      {/* Results count */}
+      <div className="mb-3 text-sm text-gray-600">
+        {results.length} produto{results.length !== 1 ? 's' : ''} encontrado{results.length !== 1 ? 's' : ''}
+      </div>
 
       {/* Conditional rendering based on screen size */}
       {isMobile ? (

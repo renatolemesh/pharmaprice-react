@@ -11,8 +11,6 @@ const pharmacies = [
   { name: "Pague menos", value: 8 }
 ];
 
-window.searched = false;
-
 const ReportFilter = ({ onGenerateReport }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -33,7 +31,6 @@ const ReportFilter = ({ onGenerateReport }) => {
 
   const handleGenerateClick = () => {
     setErrorMessage('');
-    window.searched = true;
     onGenerateReport({ startDate, endDate, selectedPharmacies, priceType, query });
   };
 
