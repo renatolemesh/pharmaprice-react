@@ -196,11 +196,6 @@ const ResponsivePriceHistoryResults = ({ results }) => {
 
   return (
     <div className="p-2 sm:p-4">
-      {/* Results count */}
-      <div className="mb-3 text-sm text-gray-600">
-        {results.length} produto{results.length !== 1 ? 's' : ''} encontrado{results.length !== 1 ? 's' : ''}
-      </div>
-
       {/* Conditional rendering based on screen size */}
       {isMobile ? (
         <div className="space-y-1">
