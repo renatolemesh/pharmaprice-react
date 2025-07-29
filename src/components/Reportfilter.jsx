@@ -15,7 +15,7 @@ const ReportFilter = ({ onGenerateReport }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
-  const [priceType, setPriceType] = useState('historical');
+  const [priceType, setPriceType] = useState('current');
   const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showPharmacyDropdown, setShowPharmacyDropdown] = useState(false);
@@ -50,16 +50,6 @@ const ReportFilter = ({ onGenerateReport }) => {
 
   return (
     <div className="p-4 bg-white shadow rounded-md">
-      <div className="flex mb-4">
-        <input
-          type="text"
-          placeholder="Pesquisar por descrição"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-grow px-4 py-2 border rounded-md"
-        />
-        
-      </div>
       <div className="flex space-x-4 mb-4">
         <div className="relative" ref={dropdownRef}> {/* Adiciona a referência aqui */}
           <button
