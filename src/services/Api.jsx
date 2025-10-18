@@ -1,6 +1,6 @@
 export const BASE_URL = 'https://pharmaprice.shop/api';
 
-const fetchData = async (endpoint, queryParams) => {
+const fetchData = async (endpoint, queryParams = {}) => {
   const apiUrl = new URL(`${BASE_URL}/${endpoint}`);
   Object.keys(queryParams).forEach(key => apiUrl.searchParams.append(key, queryParams[key]));
 
@@ -26,13 +26,8 @@ export const fetchPrecos = async (searchFilters, currentPage) => {
     page: currentPage,
     ...(query && { [searchType]: query })
   };
-
-  try {
-    const { data: resultsData, last_page: totalPages } = await fetchData('precos', queryParams);
+   const { data: resultsData, last_page: totalPages } = await fetchData('precos', queryParams);
     return { resultsData, totalPages };
-  } catch (error) {
-    throw error;
-  }
 };
 
 export const fetchPriceHistory = async (query, searchType, startDate, endDate, selectedPharmacy, page = 1) => {
@@ -44,11 +39,7 @@ export const fetchPriceHistory = async (query, searchType, startDate, endDate, s
     ...(selectedPharmacy && { farmacia: selectedPharmacy })
   };
 
-  try {
     return await fetchData('precos/historico', queryParams);
-  } catch (error) {
-    throw error;
-  }
 };
 
 export const fetchReportData = async (filters, page = 1) => {
@@ -61,11 +52,8 @@ export const fetchReportData = async (filters, page = 1) => {
     ...(selectedPharmacies.length > 0 && { farmacia: selectedPharmacies.join('+') })
   };
 
-  try {
     return await fetchData(endpoint, queryParams);
-  } catch (error) {
-    throw error;
-  }
+
 };
 
 export const exportReportData = async (filters) => {
@@ -78,32 +66,37 @@ export const exportReportData = async (filters) => {
     ...(selectedPharmacies.length > 0 && { farmacia: selectedPharmacies.join('+') })
   };
 
-  try {
     return await fetchData(endpoint, queryParams);
-  } catch (error) {
-    throw error;
-  }
+
 };
 
 // New function for fetching descriptions
 export const fetchDescriptions = async (query) => {
   const queryParams = { descricao: query }; // Adjust as per your API requirements
-
-  try {
     const data = await fetchData('descricoes', queryParams);
     return data; // Assuming the API returns an array of descriptions
-  } catch (error) {
-    throw error;
-  }
 };
 
 export const fetchFilteredDescriptions = async (query) => {
   const queryParams = { descricao: query };
+  const data = await fetchData('descricoes', queryParams);
+  return data; // Supondo que a API retorna um array de descrições
 
-  try {
-    const data = await fetchData('descricoes', queryParams);
-    return data; // Supondo que a API retorna um array de descrições
-  } catch (error) {
-    throw error;
-  }
 };
+
+export const fetchTrendsData = async () => {
+    return await fetchData('dashboard/trends');
+
+};
+
+export const fetchStatistics = async () => {
+    return await fetchData('dashboard/statistics');
+};
+
+export const fetchTopProductsChanges = async () => {
+  return await fetchData('dashboard/top-changes');
+}
+
+export const fetchPharmacyStats = async () => {
+  return await fetchData('dashboard/pharmacy-stats');
+}

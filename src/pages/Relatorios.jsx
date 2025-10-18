@@ -21,7 +21,6 @@ const Relatorios = () => {
     setHasFetched(true); // Marca que a consulta foi realizada
     try {
       const data = await fetchReportData(newFilters, page);
-      console.log(data.message)
       if (data.message == "Nenhum resultado encontrado.") {
         setResults([]); // Limpa os resultados e exibe a mensagem
       } else {

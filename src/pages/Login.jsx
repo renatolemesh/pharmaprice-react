@@ -21,7 +21,6 @@ const Login = () => {
             const dados = res.data;
 
             if (dados.message === "The provided credentials are incorrect.") {
-                console.log('Credenciais inválidas');
                 setMessage('Credenciais inválidas');
                 return;
             }

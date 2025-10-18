@@ -21,6 +21,9 @@ const VerticalMenu = ({ onToggleMenu }) => {
             <img src="/logo.png" alt="Logo" className="w-auto p-1"/>
           )}
           <nav className="mt-6">
+            <div onClick={() => navigate('/dashboard')} className="flex items-center px-4 py-2 text-gray-200 hover:bg-gray-700 hover:text-gray-200 cursor-pointer">
+              <span className={`mx-4 font-medium ${isOpen ? 'block' : 'hidden'}`}>Dashboard</span>
+            </div>
             <div onClick={() => navigate('/precos')} className="flex items-center px-4 py-2 text-gray-200 hover:bg-gray-700 hover:text-gray-200 cursor-pointer">
               <span className={`mx-4 font-medium ${isOpen ? 'block' : 'hidden'}`}>Comparar Preços</span>
             </div>

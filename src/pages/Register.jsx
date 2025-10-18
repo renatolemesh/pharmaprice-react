@@ -29,7 +29,6 @@ const Register = () => {
             const dados = res.data;
 
             if (dados.message !== 'User registered successfully') {
-                console.log(dados.message);
                 setMessage(dados.message);
                 return;
             }

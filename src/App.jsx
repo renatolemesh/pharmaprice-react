@@ -21,7 +21,6 @@ const App = () => {
       if (isAuthenticated) {
         setName(user.name);
         setRole(user.role);
-        console.log(user);
       } else {
         setMessage(message);
       }
@@ -55,11 +54,6 @@ const App = () => {
       <div className={`flex-grow transition-all duration-300 ${shouldShowMenu ? (isMenuOpen ? 'ml-64' : 'ml-20') : ''}`}>
         <AppRouter />
       </div>
-      { auth ? (
-        console.log('You are authorized', name)
-      ) : (
-        console.log('You are not authorized')
-      )}
     </div>
   );
 };
