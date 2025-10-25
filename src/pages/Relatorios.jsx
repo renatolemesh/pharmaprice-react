@@ -4,7 +4,6 @@ import ResultsTable from '../components/ResultsTable';
 import PriceHistoryResults from '../components/PriceHistoryResults';
 import Pagination from '../components/Pagination';
 import * as XLSX from 'xlsx';
-import { CSVLink } from 'react-csv';
 import { fetchReportData, exportReportData } from '../services/Api';
 
 const Relatorios = () => {
@@ -13,16 +12,16 @@ const Relatorios = () => {
   const [filters, setFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [hasFetched, setHasFetched] = useState(false); // Novo estado para verificar se a consulta foi feita
-  const [exporting, setExporting] = useState(false); // Novo estado para verificar se estamos exportando
+  const [hasFetched, setHasFetched] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleGenerateReport = async (newFilters, page = 1) => {
     setLoading(true);
-    setHasFetched(true); // Marca que a consulta foi realizada
+    setHasFetched(true);
     try {
       const data = await fetchReportData(newFilters, page);
-      if (data.message == "Nenhum resultado encontrado.") {
-        setResults([]); // Limpa os resultados e exibe a mensagem
+      if (data.message === "Nenhum resultado encontrado.") {
+        setResults([]);
       } else {
         setResults(data.data);
         setCurrentPage(data.current_page);
@@ -31,6 +30,7 @@ const Relatorios = () => {
       setFilters(newFilters);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -41,6 +41,7 @@ const Relatorios = () => {
   };
 
   const renderResults = () => {
+    // Show loading spinner
     if (loading) {
       return (
         <div className="flex items-center justify-center h-screen">
@@ -49,7 +50,13 @@ const Relatorios = () => {
       );
     }
 
-    if (results.length === 0 && hasFetched) {
+    // Don't show anything before first search
+    if (!hasFetched) {
+      return null;
+    }
+
+    // Show "no results" message after search
+    if (results.length === 0) {
       return (
         <div className="flex justify-center items-center h-screen">
           <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
@@ -57,6 +64,7 @@ const Relatorios = () => {
       );
     }
 
+    // Show results
     return filters.priceType === 'current' ? (
       <ResultsTable results={results} />
     ) : (
@@ -65,6 +73,11 @@ const Relatorios = () => {
   };
 
   const renderPagination = () => {
+    // Only show pagination if we have results
+    if (!hasFetched || results.length === 0) {
+      return null;
+    }
+
     return (
       <Pagination 
         currentPage={currentPage} 
@@ -75,7 +88,7 @@ const Relatorios = () => {
   };
 
   const exportToExcel = async () => {
-    setExporting(true); // Marca que a exportação está em andamento
+    setExporting(true);
     try {
       const data = await exportReportData(filters);
       const formattedData = filters.priceType === 'current' 
@@ -87,13 +100,14 @@ const Relatorios = () => {
       XLSX.writeFile(workbook, "relatorio.xlsx");
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
+      alert('Erro ao exportar para Excel. Tente novamente.');
     } finally {
-      setExporting(false); // Finaliza a exportação
+      setExporting(false);
     }
   };
 
   const exportToCSV = async () => {
-    setExporting(true); // Marca que a exportação está em andamento
+    setExporting(true);
     try {
       const data = await exportReportData(filters);
       const formattedData = filters.priceType === 'current' 
@@ -109,8 +123,9 @@ const Relatorios = () => {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Erro ao exportar para CSV:', error);
+      alert('Erro ao exportar para CSV. Tente novamente.');
     } finally {
-      setExporting(false); // Finaliza a exportação
+      setExporting(false);
     }
   };
 
@@ -154,38 +169,43 @@ const Relatorios = () => {
   };
 
   return (
-    <div>
-      {/* Botões de exportação acima do filtro */}
+    <div className="relative">
+      {/* Filter Section */}
       <ReportFilter onGenerateReport={handleGenerateReport} />
       
-      {results.length > 0 && (
+      {/* Export Buttons - Only show when there are results */}
+      {results.length > 0 && !loading && (
         <div className="flex justify-end mt-4 space-x-4 mr-5">
           <button 
             onClick={exportToExcel} 
-            className="px-4 py-2 bg-green-600 text-white rounded-md"
-            disabled={exporting} // Desabilita o botão durante a exportação
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={exporting}
           >
-            Exportar para Excel
+            {exporting ? 'Exportando...' : 'Exportar para Excel'}
           </button>
           <button 
             onClick={exportToCSV} 
-            className="px-4 py-2 bg-yellow-600 text-white rounded-md"
-            disabled={exporting} // Desabilita o botão durante a exportação
+            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={exporting}
           >
-            Exportar para CSV
+            {exporting ? 'Exportando...' : 'Exportar para CSV'}
           </button>
         </div>
       )}
 
-      {/* Gif de carregamento (só exibe se exportando) */}
+      {/* Loading indicator for exports */}
       {exporting && (
-        <div className="absolute top-4 right-4">
-          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-10 h-auto" />
+        <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-3 flex items-center space-x-2 z-50">
+          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-8 h-8" />
+          <span className="text-sm font-medium">Exportando dados...</span>
         </div>
       )}
 
+      {/* Results Section */}
       {renderResults()}
-      {results.length > 0 && renderPagination()}
+      
+      {/* Pagination */}
+      {renderPagination()}
     </div>
   );
 };

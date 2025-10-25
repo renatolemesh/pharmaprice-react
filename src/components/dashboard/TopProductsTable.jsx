@@ -1,10 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchTopProductsChanges } from '../../services/Api';  
-
-const response = await fetchTopProductsChanges() ?? {};
-const increases = response.top_prices_increase || [];
-const decreases = response.top_prices_decrease || [];
+import { useDashboard } from '../../contexts/DashboardContext';
 
 const ProductList = ({ items, type }) => (
   <div className="space-y-3">
@@ -57,9 +53,10 @@ const ProductList = ({ items, type }) => (
 );
 
 export const TopProductsTable = () => {
+  const { topProducts } = useDashboard();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Increases Card */}
       <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -68,11 +65,10 @@ export const TopProductsTable = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ProductList items={increases} type="increase" />
+          <ProductList items={topProducts.top_prices_increase} type="increase" />
         </CardContent>
       </Card>
 
-      {/* Decreases Card */}
       <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -81,7 +77,7 @@ export const TopProductsTable = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ProductList items={decreases} type="decrease" />
+          <ProductList items={topProducts.top_prices_decrease} type="decrease" />
         </CardContent>
       </Card>
     </div>

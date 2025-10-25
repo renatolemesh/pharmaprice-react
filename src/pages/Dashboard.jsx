@@ -1,3 +1,4 @@
+import { DashboardProvider, useDashboard } from '../contexts/DashboardContext';
 import { MetricCard } from '../components/dashboard/MetricCard';
 import { DonutChart } from '../components/dashboard/DonutChart';
 import { TopProductsTable } from '../components/dashboard/TopProductsTable';
@@ -12,23 +13,24 @@ import {
   RefreshCw 
 } from 'lucide-react';
 
-import { fetchStatistics, fetchPharmacyStats, fetchTopProductsChanges } from '../services/Api';  
+const DashboardContent = () => {
+  const { statistics, pharmacyStats, topProducts, loading } = useDashboard();
 
-const { data: statisticsData = [] } = await fetchStatistics() ?? {};
-const { data: pharmacyStatsData = [] } = await fetchPharmacyStats() ?? {};
-const  topProducts = await fetchTopProductsChanges() ?? {};
-let topDecrease = '-';
-let topIncrease = '-';
+  const topDecrease = topProducts.top_prices_decrease?.[0]?.variation_percent || '-';
+  const topIncrease = topProducts.top_prices_increase?.[0]?.variation_percent || '-';
 
-if(topProducts['top_prices_decrease'] && topProducts['top_prices_decrease'][0]){
-  topDecrease = topProducts['top_prices_decrease'][0].variation_percent;
-}
-if(topProducts['top_prices_increase'] && topProducts['top_prices_increase'][0]){
-  topIncrease = topProducts['top_prices_increase'][0].variation_percent;
-}
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-dashboard-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-lg">Carregando dados do painel...</p>
+        </div>
+      </div>
+    );
+  }
 
-
-const Dashboard = () => (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
@@ -45,52 +47,52 @@ const Dashboard = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           <MetricCard
             title="Produtos Atualizados na Última Semana"
-            value={formatNumberToBRL(statisticsData.updated_products)}
-            change={statisticsData.updated_products_change}
-            changeType={statisticsData.updated_products_change >= 0 ? 'increase' : 'decrease'}
-            trend={statisticsData.updated_products_change >= 0 ? 'up' : 'down'}
+            value={formatNumberToBRL(statistics.updated_products || 0)}
+            change={statistics.updated_products_change}
+            changeType={statistics.updated_products_change >= 0 ? 'increase' : 'decrease'}
+            trend={statistics.updated_products_change >= 0 ? 'up' : 'down'}
             icon={<RefreshCw className="w-6 h-6 text-dashboard-primary" />}
           />
           
           <MetricCard
             title="Variação Média de Preços"
-            value={statisticsData.average_variation+'%'}
-            change={statisticsData.average_variation_change}
-            changeType={statisticsData.average_variation_change >= 0 ? 'increase' : 'decrease'}
-            trend={statisticsData.average_variation_change >= 0 ? 'up' : 'down'}
+            value={(statistics.average_variation || 0) + '%'}
+            change={statistics.average_variation_change}
+            changeType={statistics.average_variation_change >= 0 ? 'increase' : 'decrease'}
+            trend={statistics.average_variation_change >= 0 ? 'up' : 'down'}
             icon={<TrendingDown className="w-6 h-6 text-dashboard-danger" />}
           />
           
           <MetricCard
             title="Aumentos de Preço"
-            value={formatNumberToBRL(statisticsData.price_increases)}
-            change={statisticsData.price_increases_change}
-            changeType={statisticsData.price_increases_change >= 0 ? 'increase' : 'decrease'}
-            trend={statisticsData.price_increases_change >= 0 ? 'up' : 'down'}
+            value={formatNumberToBRL(statistics.price_increases || 0)}
+            change={statistics.price_increases_change}
+            changeType={statistics.price_increases_change >= 0 ? 'increase' : 'decrease'}
+            trend={statistics.price_increases_change >= 0 ? 'up' : 'down'}
             icon={<TrendingUp className="w-6 h-6 text-dashboard-success" />}
           />
           
           <MetricCard
             title="Reduções de Preço"
-            value={formatNumberToBRL(statisticsData.price_decreases)}
-            change={statisticsData.price_decreases_change}
-            changeType={statisticsData.price_decreases_change >= 0 ? 'increase' : 'decrease'}
-            trend={statisticsData.price_decreases_change >= 0 ? 'up' : 'down'}
+            value={formatNumberToBRL(statistics.price_decreases || 0)}
+            change={statistics.price_decreases_change}
+            changeType={statistics.price_decreases_change >= 0 ? 'increase' : 'decrease'}
+            trend={statistics.price_decreases_change >= 0 ? 'up' : 'down'}
             icon={<TrendingDown className="w-6 h-6 text-dashboard-danger" />}
           />
           
           <MetricCard
             title="Tempo Médio para Alteração"
-            value={statisticsData.average_change_time+' dias'}
-            change={statisticsData.average_change_time_change}
-            changeType={statisticsData.average_change_time_change >= 0 ? 'increase' : 'decrease'}
-            trend={statisticsData.average_change_time_change >= 0 ? 'up' : 'down'}
+            value={(statistics.average_change_time || 0) + ' dias'}
+            change={statistics.average_change_time_change}
+            changeType={statistics.average_change_time_change >= 0 ? 'increase' : 'decrease'}
+            trend={statistics.average_change_time_change >= 0 ? 'up' : 'down'}
             icon={<Clock className="w-6 h-6 text-dashboard-accent" />}
           />
 
           <MetricCard
             title="Total de Produtos"
-            value={formatNumberToBRL(statisticsData.total_products)}
+            value={formatNumberToBRL(statistics.total_products || 0)}
             change={null}
             icon={<Package className="w-6 h-6 text-dashboard-secondary" />}
             showPercentage={false}
@@ -112,7 +114,7 @@ const Dashboard = () => (
           <div className="space-y-6">
             <MetricCard
               title="Total de Preços Armazenados"
-              value={formatNumberToBRL(statisticsData.total_prices_stored)}
+              value={formatNumberToBRL(statistics.total_prices_stored || 0)}
               change={null}
               showPercentage={false}
               icon={<Database className="w-6 h-6 text-dashboard-primary" />}
@@ -124,17 +126,17 @@ const Dashboard = () => (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Farmácia Mais Atualizada:</span>
                   <span className="font-medium">
-                    {pharmacyStatsData[0].pharmacy_name ?? '-'} 
-                    {' (' + formatNumberToBRL(pharmacyStatsData[0].updated_products)  + ')'}
-                    </span>
+                    {pharmacyStats[0]?.pharmacy_name ?? '-'} 
+                    {pharmacyStats[0] && ' (' + formatNumberToBRL(pharmacyStats[0].updated_products) + ')'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Maior Queda de Preço:</span>
-                  <span className="font-medium text-dashboard-success">{topDecrease + '%'}</span>
+                  <span className="font-medium text-dashboard-success">{topDecrease}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Maior Aumento de Preço:</span>
-                  <span className="font-medium text-dashboard-danger">{topIncrease + '%'}</span>
+                  <span className="font-medium text-dashboard-danger">{topIncrease}%</span>
                 </div>
               </div>
             </div>
@@ -143,5 +145,12 @@ const Dashboard = () => (
       </div>
     </div>
   );
+};
+
+const Dashboard = () => (
+  <DashboardProvider>
+    <DashboardContent />
+  </DashboardProvider>
+);
 
 export default Dashboard;

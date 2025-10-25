@@ -100,3 +100,7 @@ export const fetchTopProductsChanges = async () => {
 export const fetchPharmacyStats = async () => {
   return await fetchData('dashboard/pharmacy-stats');
 }
+
+export const fetchDashboardSummary = async () => {
+  return await fetchData('dashboard/summary');
+};

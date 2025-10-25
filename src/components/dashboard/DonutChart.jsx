@@ -1,16 +1,23 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { fetchStatistics } from '../../services/Api';  
-
-const statisticsDataGross = await fetchStatistics();
-let statisticsData = statisticsDataGross.data ?? null;
-let chartData = [];
-if (statisticsData) {
-  chartData.push({ name: 'Aumentos', value: parseInt(statisticsData.price_increases) ?? 0, color: 'hsl(var(--dashboard-danger))' });
-  chartData.push({ name: 'Reduções', value: parseInt(statisticsData.price_decreases) ?? 0, color: 'hsl(var(--dashboard-success))' });
-}
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 export const DonutChart = () => {
+  const { statistics } = useDashboard();
+
+  const chartData = [
+    { 
+      name: 'Aumentos', 
+      value: parseInt(statistics.price_increases) || 0, 
+      color: 'hsl(var(--dashboard-danger))' 
+    },
+    { 
+      name: 'Reduções', 
+      value: parseInt(statistics.price_decreases) || 0, 
+      color: 'hsl(var(--dashboard-success))' 
+    }
+  ];
+
   const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
   const CustomTooltip = ({ active, payload }) => {
@@ -27,6 +34,23 @@ export const DonutChart = () => {
     }
     return null;
   };
+
+  if (total === 0) {
+    return (
+      <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Produtos com Aumento de Preço vs. Redução de Preço
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center">
+            <p className="text-muted-foreground">Nenhum dado disponível</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
