@@ -1,4 +1,4 @@
-export const BASE_URL = 'https://pharmaprice.shop/api';
+export const BASE_URL = 'https://pharmaprices.shop/api';
 
 const fetchData = async (endpoint, queryParams = {}) => {
   const apiUrl = new URL(`${BASE_URL}/${endpoint}`);
