@@ -114,7 +114,7 @@ const Relatorios = () => {
         ? formatDataForExport(data.data) 
         : formatHistoricalDataForExport(data.data);
       const csv = convertToCSV(formattedData);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob(['\uFEFF' + csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.setAttribute("download", "relatorio.csv");
@@ -162,9 +162,17 @@ const Relatorios = () => {
     return `${day}/${month}/${year}`;
   };
 
+  const escapeCSVValue = (value) => {
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   const convertToCSV = (data) => {
-    const header = Object.keys(data[0]).join(',') + '\n';
-    const csv = data.map(row => Object.values(row).join(',')).join('\n');
+    const header = Object.keys(data[0]).map(escapeCSVValue).join(',') + '\n';
+    const csv = data.map(row => Object.values(row).map(escapeCSVValue).join(',')).join('\n');
     return header + csv;
   };
 
