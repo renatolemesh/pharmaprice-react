@@ -163,8 +163,8 @@ const Relatorios = () => {
   };
 
   const escapeCSVValue = (value) => {
-    const str = String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    const str = String(value).replace(/[\r\n]+/g, ' ').trim();
+    if (str.includes(',') || str.includes('"')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
