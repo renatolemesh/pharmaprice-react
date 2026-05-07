@@ -56,18 +56,24 @@ export const fetchReportData = async (filters, page = 1) => {
 
 };
 
-export const exportReportData = async (filters) => {
+export const exportReportData = async (filters, formato = 'csv') => {
   const { priceType, startDate, endDate, selectedPharmacies } = filters;
-  const endpoint = priceType === 'historical' ? 'precos/historico' : 'precos';
   const queryParams = {
-    no_paginate: true,
+    formato,
+    priceType: priceType === 'historical' ? 'historical' : 'current',
     ...(startDate && { 'data-inicio': startDate }),
     ...(endDate && { 'data-fim': endDate }),
     ...(selectedPharmacies.length > 0 && { farmacia: selectedPharmacies.join('+') })
   };
 
-    return await fetchData(endpoint, queryParams);
+  const apiUrl = new URL(`${BASE_URL}/report/export`);
+  Object.keys(queryParams).forEach(key => apiUrl.searchParams.append(key, queryParams[key]));
 
+  const response = await fetch(apiUrl.toString());
+  if (!response.ok) {
+    throw new Error('Erro ao exportar dados');
+  }
+  return response.blob();
 };
 
 // New function for fetching descriptions

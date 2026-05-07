@@ -3,7 +3,6 @@ import ReportFilter from '../components/Reportfilter';
 import ResultsTable from '../components/ResultsTable';
 import PriceHistoryResults from '../components/PriceHistoryResults';
 import Pagination from '../components/Pagination';
-import * as XLSX from 'xlsx';
 import { fetchReportData, exportReportData } from '../services/Api';
 
 const Relatorios = () => {
@@ -87,17 +86,22 @@ const Relatorios = () => {
     );
   };
 
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const exportToExcel = async () => {
     setExporting(true);
     try {
-      const data = await exportReportData(filters);
-      const formattedData = filters.priceType === 'current' 
-        ? formatDataForExport(data.data) 
-        : formatHistoricalDataForExport(data.data);
-      const worksheet = XLSX.utils.json_to_sheet(formattedData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
-      XLSX.writeFile(workbook, "relatorio.xlsx");
+      const blob = await exportReportData(filters, 'excel');
+      downloadBlob(blob, 'relatorio.xlsx');
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
       alert('Erro ao exportar para Excel. Tente novamente.');
@@ -109,71 +113,14 @@ const Relatorios = () => {
   const exportToCSV = async () => {
     setExporting(true);
     try {
-      const data = await exportReportData(filters);
-      const formattedData = filters.priceType === 'current' 
-        ? formatDataForExport(data.data) 
-        : formatHistoricalDataForExport(data.data);
-      const csv = convertToCSV(formattedData);
-      const blob = new Blob(['\uFEFF' + csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", "relatorio.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const blob = await exportReportData(filters, 'csv');
+      downloadBlob(blob, 'relatorio.csv');
     } catch (error) {
       console.error('Erro ao exportar para CSV:', error);
       alert('Erro ao exportar para CSV. Tente novamente.');
     } finally {
       setExporting(false);
     }
-  };
-
-  const formatDataForExport = (data) => {
-    return data.map(item => ({
-      Farmácia: item.nome_farmacia,
-      Descrição: item.descricao,
-      Laboratório: item.laboratorio || '',
-      EAN: item.EAN,
-      Preços: item.preco,
-      Datas: formatarDataBrasileira(item.data),
-    }));
-  };
-
-  const formatHistoricalDataForExport = (data) => {
-    const formattedData = [];
-    data.forEach(item => {
-      item.precos.forEach(preco => {
-        formattedData.push({
-          Farmácia: item.nome_farmacia,
-          Descrição: item.descricao,
-          Laboratório: item.laboratorio || '',
-          EAN: item.EAN,
-          Preço: preco.preco,
-          Data: formatarDataBrasileira(preco.data),
-        });
-      });
-    });
-    return formattedData;
-  };
-
-  const formatarDataBrasileira = (data) => {
-    const [year, month, day] = data.split('-');
-    return `${day}/${month}/${year}`;
-  };
-
-  const escapeCSVValue = (value) => {
-    const str = String(value).replace(/[\r\n]+/g, ' ').trim();
-    if (str.includes(',') || str.includes('"')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  const convertToCSV = (data) => {
-    const header = Object.keys(data[0]).map(escapeCSVValue).join(',') + '\n';
-    const csv = data.map(row => Object.values(row).map(escapeCSVValue).join(',')).join('\n');
-    return header + csv;
   };
 
   return (
