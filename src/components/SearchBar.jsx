@@ -6,8 +6,8 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const ehEan = (valor) => /^\d{5,15}$/.test(valor.trim());
 
-const SearchBar = ({ onSearch, autoFocus = false }) => {
-  const [query, setQuery] = useState("");
+const SearchBar = ({ onSearch, autoFocus = false, valorInicial = "" }) => {
+  const [query, setQuery] = useState(valorInicial);
   const [erro, setErro] = useState("");
   const [sugestoes, setSugestoes] = useState([]);
   const [aberto, setAberto] = useState(false);
@@ -15,8 +15,9 @@ const SearchBar = ({ onSearch, autoFocus = false }) => {
   const [destaque, setDestaque] = useState(-1);
 
   // Termo ja pesquisado: evita reabrir o autocomplete com o texto que o proprio
-  // clique na sugestao acabou de escrever na caixa.
-  const jaBuscado = useRef("");
+  // clique na sugestao acabou de escrever na caixa. Comeca com o valor que veio
+  // da URL — abrir um link de busca compartilhado nao pode disparar sugestao.
+  const jaBuscado = useRef(valorInicial);
   const containerRef = useRef(null);
   const listId = useId();
 
@@ -221,6 +222,7 @@ const SearchBar = ({ onSearch, autoFocus = false }) => {
 SearchBar.propTypes = {
   onSearch: PropTypes.func.isRequired,
   autoFocus: PropTypes.bool,
+  valorInicial: PropTypes.string,
 };
 
 export default SearchBar;

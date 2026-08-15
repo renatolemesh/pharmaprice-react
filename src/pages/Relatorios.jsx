@@ -6,19 +6,8 @@ import PriceHistoryResults from "../components/PriceHistoryResults";
 import Pagination from "../components/Pagination";
 import PageHeader from "../components/ui/PageHeader";
 import { EmptyState, ErrorState, TableSkeleton } from "../components/ui/feedback";
-import { exportReportData, fetchReportData } from "../services/api";
+import { baixarBlob, exportReportData, fetchReportData } from "../services/api";
 import { useApiQuery, useRetry } from "../hooks/useApiQuery";
-
-const baixarBlob = (blob, nomeArquivo) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = nomeArquivo;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
 
 const Relatorios = () => {
   const [filtros, setFiltros] = useState(null);

@@ -85,14 +85,29 @@ export const fetchReportData = (filters, page = 1, signal) => {
   });
 };
 
+/**
+ * Exporta CSV/Excel montado pelo servidor.
+ *
+ * Aceita tambem `query`/`searchType` porque o /report/export ja valida `ean` e
+ * `descricao` — so ninguem mandava. E o que permite exportar o resultado de uma
+ * busca, e nao apenas o recorte por farmacia e periodo.
+ */
 export const exportReportData = (filters, formato = "csv", signal) => {
-  const { priceType, startDate, endDate, selectedPharmacies = [] } = filters;
+  const {
+    priceType,
+    startDate,
+    endDate,
+    selectedPharmacies = [],
+    query,
+    searchType,
+  } = filters;
 
   return getBlob(
     "report/export",
     {
       formato,
       priceType: priceType === "historical" ? "historical" : "current",
+      ...(query && searchType ? { [searchType]: query } : {}),
       ...(startDate ? { "data-inicio": startDate } : {}),
       ...(endDate ? { "data-fim": endDate } : {}),
       ...(selectedPharmacies.length
@@ -101,6 +116,18 @@ export const exportReportData = (filters, formato = "csv", signal) => {
     },
     { signal },
   );
+};
+
+/** Dispara o download de um blob já pronto. */
+export const baixarBlob = (blob, nomeArquivo) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
 
 /* -------------------------------------------------------------------------

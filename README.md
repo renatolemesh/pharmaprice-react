@@ -52,6 +52,20 @@ produto com preço estável há três meses tem `data` de três meses atrás e
   menos de 100 grupos, e a série de um produto pode ficar partida entre páginas.
   Buscar por EAN mantém a série junta.
 
+## Cor das farmácias
+
+A paleta categórica vive no [src/index.css](src/index.css) como `--serie-1..8` e
+é atribuída pelo `farmacia_id`, nunca pela colocação no ranking — filtrar ou
+reordenar não repinta ninguém. As oito matizes e a ordem foram validadas para
+daltonismo nos dois temas (pior par adjacente ΔE 9,1 claro / 8,4 escuro). Três
+cores do tema claro ficam abaixo de 3:1 contra o fundo, então toda tela que usa
+a paleta traz legenda e a lista de preços com o nome escrito ao lado — a
+identidade nunca depende só da cor.
+
+Uma nona farmácia cai em cinza de propósito: gerar uma nona matiz derrubaria a
+separação que as oito garantem. Quando acontecer, o caminho é agrupar ou
+facetar.
+
 ## Estrutura
 
 ```
@@ -60,9 +74,14 @@ src/
   hooks/       useApiQuery, useDebouncedValue, useFarmacias, useMediaQuery
   contexts/    auth · theme · dashboard  (contexto+hook em .js, provider em .jsx)
   components/  tabela, filtros, ui/
-  pages/       Precos · Historico · Relatorios · Dashboard · Login · Register
-  utils/       url.js (montarUrl), format.js
+  pages/       Precos · Produto · Historico · Relatorios · Dashboard · Login
+  utils/       url.js (montarUrl), format.js, paletaFarmacias.js
 ```
+
+A busca mora na query string (`/precos?q=dipirona&tipo=descricao`), então o
+resultado pode ser compartilhado e o botão voltar do navegador desfaz a busca.
+`/produto/:ean` junta todas as farmácias, a diferença entre a mais barata e a
+mais cara, e o histórico das redes sobreposto num gráfico só.
 
 Recharts (409 kB) fica fora do bundle inicial: Painel, Histórico e Relatórios
 são carregados sob demanda.

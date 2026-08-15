@@ -15,6 +15,7 @@ import Pricing from "./pages/Pricing";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Historico = lazy(() => import("./pages/Historico"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Produto = lazy(() => import("./pages/Produto"));
 
 /** Rota que exige sessao. Guarda de onde veio, pra voltar depois do login. */
 const RequireAuth = ({ children }) => {
@@ -67,6 +68,7 @@ const AppRouter = () => (
   <Routes>
     <Route path="/" element={<Navigate to="/precos" replace />} />
     <Route path="/precos" element={admin(<Precos />)} />
+    <Route path="/produto/:ean" element={admin(<Produto />)} />
     <Route path="/historico" element={admin(<Historico />)} />
     <Route path="/relatorios" element={admin(<Relatorios />)} />
     <Route path="/dashboard" element={admin(<Dashboard />)} />

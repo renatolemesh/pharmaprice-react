@@ -61,6 +61,27 @@
     --sidebar-accent: 222 25% 20%;
     --sidebar-border: 222 22% 22%;
 
+    /*
+     * Paleta categórica das farmácias — uma cor por rede, atribuída pelo
+     * farmacia_id e nunca pela posição no ranking: se a Callfarma é azul, ela
+     * segue azul mesmo quando deixa de ser a mais barata ou some do filtro.
+     *
+     * Ordem fixa e validada para daltonismo (pior par adjacente ΔE 9,1 no
+     * claro / 8,4 no escuro; visão normal 19,6 / 19,3). Três cores do modo
+     * claro ficam abaixo de 3:1 contra o fundo, então a tela sempre traz
+     * legenda e a tabela de preços ao lado — identidade nunca depende só da
+     * cor. Uma nona farmácia entraria em cinza, não numa cor gerada.
+     */
+    --serie-1: #2a78d6;
+    --serie-2: #eb6834;
+    --serie-3: #1baf7a;
+    --serie-4: #eda100;
+    --serie-5: #e87ba4;
+    --serie-6: #008300;
+    --serie-7: #4a3aa7;
+    --serie-8: #e34948;
+    --serie-outra: #8a8a8a;
+
     /* Gradientes */
     --gradient-primary: linear-gradient(135deg, hsl(215 85% 55%), hsl(185 80% 50%));
     --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(220 20% 97%) 100%);
@@ -114,6 +135,18 @@
     --sidebar-muted: 220 10% 55%;
     --sidebar-accent: 222 26% 18%;
     --sidebar-border: 222 22% 20%;
+
+    /* Mesmas oito matizes, re-escalonadas para o fundo escuro — não é um
+       inverso automático do claro; foi validado como conjunto próprio. */
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
+    --serie-5: #d55181;
+    --serie-6: #008300;
+    --serie-7: #9085e9;
+    --serie-8: #e66767;
+    --serie-outra: #9a9a9a;
 
     --gradient-primary: linear-gradient(135deg, hsl(215 80% 65%), hsl(185 75% 60%));
     --gradient-card: linear-gradient(135deg, hsl(222 26% 12%) 0%, hsl(222 22% 15%) 100%);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { ArrowDown, ArrowUp, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowDown, ArrowUp, ExternalLink, LineChart } from "lucide-react";
 import { montarUrl } from "../utils/url";
 import { formatCurrency, formatRelativeDay } from "../utils/format";
 import { useIsMobile } from "../hooks/useMediaQuery";
@@ -326,6 +327,17 @@ const ResultsTable = ({ results = [], variante = "comparacao" }) => {
                 ))}
 
                 <td className="px-2 py-3 text-right">
+                  {/* A linha inteira abre a loja; este atalho vai pra página do
+                      produto. Duas ações diferentes, dois alvos distintos. */}
+                  <Link
+                    to={`/produto/${item.EAN}`}
+                    onClick={(e) => e.stopPropagation()}
+                    title="Ver produto e histórico"
+                    aria-label={`Ver detalhes de ${item.descricao}`}
+                    className="mr-1 inline-flex rounded-lg p-2 text-muted-foreground opacity-0 transition-smooth hover:bg-muted hover:text-dashboard-primary focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <LineChart className="h-4 w-4" />
+                  </Link>
                   {item.href ? (
                     <a
                       href={item.href}
@@ -422,17 +434,26 @@ const LinhaCartao = ({ item, catalogo }) => (
       <span>{formatRelativeDay(item.ultima_coleta_em ?? item.data)}</span>
     </div>
 
-    {item.href && (
-      <a
-        href={item.href}
-        target="_blank"
-        rel="noopener noreferrer"
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <Link
+        to={`/produto/${item.EAN}`}
         onClick={(e) => e.stopPropagation()}
-        className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-dashboard-primary transition-smooth active:bg-muted"
+        className="flex items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium transition-smooth active:bg-muted"
       >
-        Abrir na loja <ExternalLink className="h-3.5 w-3.5" />
-      </a>
-    )}
+        Ver produto
+      </Link>
+      {item.href && (
+        <a
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-dashboard-primary transition-smooth active:bg-muted"
+        >
+          Abrir loja <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </div>
   </article>
 );
 
