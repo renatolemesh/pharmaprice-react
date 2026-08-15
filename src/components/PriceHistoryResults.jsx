@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  Line,
-  LineChart,
+  Area,
+  AreaChart,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -48,6 +49,9 @@ DicaGrafico.propTypes = {
 const GrupoHistorico = ({ grupo }) => {
   const [aberto, setAberto] = useState(false);
   const isMobile = useIsMobile();
+  // O id do gradiente e global no documento: varios grupos abertos ao mesmo
+  // tempo com o mesmo id fariam todos apontar pro <defs> do primeiro.
+  const gradId = useId();
 
   const { serie, ultimo, minimo, maximo, variacao } = useMemo(() => {
     const pontos = [...(grupo.precos ?? [])]
@@ -154,42 +158,75 @@ const GrupoHistorico = ({ grupo }) => {
       {aberto && (
         <div className="border-t border-border p-3 sm:p-4">
           {serie.length > 1 && (
-            <div className="mb-4 h-56 sm:h-48">
+            /*
+             * No celular o gráfico sangra até a borda do cartão (`-mx-3`) e
+             * fica bem mais alto. Espremido entre os paddings sobravam ~290px
+             * de largura, e uma série de 3 pontos virava um risquinho no meio
+             * de espaço vazio.
+             */
+            <div className="-mx-3 mb-4 h-72 sm:mx-0 sm:h-52">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart
+                <AreaChart
                   data={serie}
-                  margin={{ top: 8, right: 12, bottom: 4, left: 0 }}
+                  margin={{ top: 12, right: 16, bottom: 4, left: 4 }}
                 >
+                  <defs>
+                    <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stopColor="hsl(var(--dashboard-primary))"
+                        stopOpacity={0.35}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="hsl(var(--dashboard-primary))"
+                        stopOpacity={0.02}
+                      />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="data"
                     // No celular o eixo mostra dd/mm: a data inteira ocupa o
                     // dobro e o Recharts acabava escondendo quase todos os
                     // rotulos pra evitar sobreposicao.
                     tickFormatter={isMobile ? diaMes : formatDate}
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={false}
                     tickLine={false}
-                    minTickGap={isMobile ? 12 : 24}
+                    minTickGap={isMobile ? 8 : 24}
+                    padding={{ left: 8, right: 8 }}
                   />
                   <YAxis
-                    domain={["dataMin", "dataMax"]}
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    domain={["dataMin - 0.5", "dataMax + 0.5"]}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={false}
                     tickLine={false}
-                    width={isMobile ? 40 : 56}
-                    tickCount={4}
+                    width={isMobile ? 38 : 60}
+                    tickCount={isMobile ? 3 : 4}
                     tickFormatter={isMobile ? soNumero : formatCurrency}
                   />
                   <Tooltip content={<DicaGrafico />} />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="valor"
                     stroke="hsl(var(--dashboard-primary))"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: "hsl(var(--dashboard-primary))" }}
-                    activeDot={{ r: 5 }}
+                    strokeWidth={3}
+                    fill={`url(#${gradId})`}
+                    dot={{
+                      r: isMobile ? 5 : 4,
+                      fill: "hsl(var(--card))",
+                      stroke: "hsl(var(--dashboard-primary))",
+                      strokeWidth: 2.5,
+                    }}
+                    activeDot={{ r: 7 }}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
               {/*
                 Curva suave (`monotone`). Vale lembrar ao ler: `precos` so ganha
