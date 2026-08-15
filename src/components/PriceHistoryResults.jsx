@@ -18,6 +18,18 @@ import EanCopiavel from "./ui/EanCopiavel";
 /** "2026-07-03" -> "03/07". Ano inteiro no eixo nao cabe em tela de celular. */
 const diaMes = (valor) => formatDate(valor).slice(0, 5);
 
+/** "2026-07-03" -> "03/07/26" */
+const dataCurta = (valor) => {
+  const d = formatDate(valor);
+  return `${d.slice(0, 6)}${d.slice(8, 10)}`;
+};
+
+/** "2026-07-03" -> "07/26" */
+const mesAno = (valor) => {
+  const d = formatDate(valor);
+  return `${d.slice(3, 5)}/${d.slice(8, 10)}`;
+};
+
 /** 8.49 -> "8,49". Sem o "R$" o eixo Y devolve uns 20px pro gráfico. */
 const soNumero = (valor) =>
   Number(valor).toLocaleString("pt-BR", {
@@ -53,7 +65,7 @@ const GrupoHistorico = ({ grupo }) => {
   // tempo com o mesmo id fariam todos apontar pro <defs> do primeiro.
   const gradId = useId();
 
-  const { serie, ultimo, minimo, maximo, variacao } = useMemo(() => {
+  const { serie, ultimo, minimo, maximo, variacao, multiAno } = useMemo(() => {
     const pontos = [...(grupo.precos ?? [])]
       .map((p) => ({ ...p, valor: numero(p.preco) }))
       .filter((p) => Number.isFinite(p.valor))
@@ -72,8 +84,29 @@ const GrupoHistorico = ({ grupo }) => {
         Number.isFinite(inicio) && inicio > 0 && Number.isFinite(fim)
           ? ((fim / inicio - 1) * 100)
           : null,
+      // Serie que atravessa a virada do ano nao pode ter rotulo so com dia/mes:
+      // "22/06 · 08/05 · 09/06" parece fora de ordem quando sao anos
+      // diferentes, e a serie esta ordenada certinho.
+      multiAno:
+        new Set(pontos.map((p) => String(p.data).slice(0, 4))).size > 1,
     };
   }, [grupo]);
+
+  /*
+   * Serie longa muda o desenho: com 72 mudancas de preco, uma bolinha por ponto
+   * cobre a propria linha e o grafico vira uma nuvem. Acima de ~24 pontos os
+   * marcadores saem e o traco afina — a leitura passa a ser a forma da curva,
+   * e o valor exato continua na tabela logo abaixo.
+   */
+  const serieLonga = serie.length > 24;
+
+  const rotuloEixoX = multiAno
+    ? isMobile
+      ? mesAno
+      : dataCurta
+    : isMobile
+      ? diaMes
+      : formatDate;
 
   const subiu = variacao > 0.5;
   const caiu = variacao < -0.5;
@@ -164,11 +197,14 @@ const GrupoHistorico = ({ grupo }) => {
              * de largura, e uma série de 3 pontos virava um risquinho no meio
              * de espaço vazio.
              */
-            <div className="-mx-3 mb-4 h-72 sm:mx-0 sm:h-52">
+            <div className="-ml-3 mb-4 h-72 sm:ml-0 sm:h-52">
               <ResponsiveContainer width="100%" height="100%">
+                {/* Margem direita generosa: o ultimo rotulo do eixo X e
+                    centralizado no ponto final, entao metade dele fica pra
+                    fora e o cartao (overflow-hidden) corta — virava "10/2". */}
                 <AreaChart
                   data={serie}
-                  margin={{ top: 12, right: 16, bottom: 4, left: 4 }}
+                  margin={{ top: 12, right: 24, bottom: 4, left: 4 }}
                 >
                   <defs>
                     <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -192,14 +228,16 @@ const GrupoHistorico = ({ grupo }) => {
                   />
                   <XAxis
                     dataKey="data"
-                    // No celular o eixo mostra dd/mm: a data inteira ocupa o
-                    // dobro e o Recharts acabava escondendo quase todos os
-                    // rotulos pra evitar sobreposicao.
-                    tickFormatter={isMobile ? diaMes : formatDate}
+                    // No celular o rotulo encolhe: a data inteira ocupa o dobro
+                    // e o Recharts acaba escondendo quase todos pra evitar
+                    // sobreposicao. O ano so entra quando a serie atravessa a
+                    // virada dele — sem isso a ordem parece errada.
+                    tickFormatter={rotuloEixoX}
                     tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={false}
                     tickLine={false}
-                    minTickGap={isMobile ? 8 : 24}
+                    minTickGap={isMobile ? 28 : 40}
+                    interval="preserveStartEnd"
                     padding={{ left: 8, right: 8 }}
                   />
                   <YAxis
@@ -216,15 +254,19 @@ const GrupoHistorico = ({ grupo }) => {
                     type="monotone"
                     dataKey="valor"
                     stroke="hsl(var(--dashboard-primary))"
-                    strokeWidth={3}
+                    strokeWidth={serieLonga ? 2 : 3}
                     fill={`url(#${gradId})`}
-                    dot={{
-                      r: isMobile ? 5 : 4,
-                      fill: "hsl(var(--card))",
-                      stroke: "hsl(var(--dashboard-primary))",
-                      strokeWidth: 2.5,
-                    }}
-                    activeDot={{ r: 7 }}
+                    dot={
+                      serieLonga
+                        ? false
+                        : {
+                            r: isMobile ? 5 : 4,
+                            fill: "hsl(var(--card))",
+                            stroke: "hsl(var(--dashboard-primary))",
+                            strokeWidth: 2.5,
+                          }
+                    }
+                    activeDot={{ r: 6 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -238,9 +280,18 @@ const GrupoHistorico = ({ grupo }) => {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/*
+            Rolagem propria acima de ~24 mudancas: 72 linhas soltas faziam o
+            cartao passar de 3.000px de altura, e chegar no proximo produto
+            virava uma viagem.
+          */}
+          <div
+            className={`overflow-x-auto ${
+              serieLonga ? "max-h-80 overflow-y-auto" : ""
+            }`}
+          >
             <table className="w-full text-sm">
-              <thead>
+              <thead className={serieLonga ? "sticky top-0 bg-card" : ""}>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="py-2 font-medium">Data</th>
                   <th className="py-2 text-right font-medium">Preço</th>
