@@ -10,7 +10,19 @@ import {
 } from "recharts";
 import { ChevronDown, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/format";
+import { useIsMobile } from "../hooks/useMediaQuery";
 import { EmptyState } from "./ui/feedback";
+import EanCopiavel from "./ui/EanCopiavel";
+
+/** "2026-07-03" -> "03/07". Ano inteiro no eixo nao cabe em tela de celular. */
+const diaMes = (valor) => formatDate(valor).slice(0, 5);
+
+/** 8.49 -> "8,49". Sem o "R$" o eixo Y devolve uns 20px pro gráfico. */
+const soNumero = (valor) =>
+  Number(valor).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const numero = (valor) => {
   const n = Number(String(valor ?? "").replace(",", "."));
@@ -35,6 +47,7 @@ DicaGrafico.propTypes = {
 
 const GrupoHistorico = ({ grupo }) => {
   const [aberto, setAberto] = useState(false);
+  const isMobile = useIsMobile();
 
   const { serie, ultimo, minimo, maximo, variacao } = useMemo(() => {
     const pontos = [...(grupo.precos ?? [])]
@@ -67,34 +80,49 @@ const GrupoHistorico = ({ grupo }) => {
       ? "text-dashboard-success"
       : "text-muted-foreground";
 
+  const alternar = () => setAberto((v) => !v);
+
   return (
     <article className="overflow-hidden rounded-card border border-border bg-card shadow-card">
-      <button
-        type="button"
-        onClick={() => setAberto((v) => !v)}
-        aria-expanded={aberto}
-        className="flex w-full items-center gap-4 p-4 text-left transition-smooth hover:bg-muted/40"
-      >
+      {/*
+        O cabecalho nao e um <button> unico: o EAN copiavel tambem e um botao, e
+        botao dentro de botao e HTML invalido — o navegador desmonta o aninhado
+        e o clique de copiar acabaria expandindo o grupo.
+      */}
+      <div className="flex items-center gap-2 p-3 sm:gap-4 sm:p-4">
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5">
             <span className="rounded-md bg-dashboard-primary/10 px-2 py-0.5 text-xs font-medium text-dashboard-primary">
               {grupo.nome_farmacia}
             </span>
-            <span className="tabular text-xs text-muted-foreground">
-              {grupo.EAN}
-            </span>
+            <EanCopiavel ean={grupo.EAN} className="text-xs" />
           </div>
-          <p className="truncate text-sm font-medium" title={grupo.descricao}>
-            {grupo.descricao}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {serie.length} {serie.length === 1 ? "mudança" : "mudanças"} de preço
-            {minimo !== null && (
-              <>
-                {" · "}mín. {formatCurrency(minimo)} · máx. {formatCurrency(maximo)}
-              </>
-            )}
-          </p>
+
+          <button
+            type="button"
+            onClick={alternar}
+            aria-expanded={aberto}
+            className="block w-full text-left"
+          >
+            {/* Duas linhas no celular em vez de truncar: com ~200px de largura
+                util, "Dipirona Sodica 500mg 20…" cortava justo na parte que
+                distingue uma apresentacao da outra. */}
+            <p
+              className="line-clamp-2 text-sm font-medium sm:truncate"
+              title={grupo.descricao}
+            >
+              {grupo.descricao}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {serie.length} {serie.length === 1 ? "mudança" : "mudanças"}
+              {minimo !== null && (
+                <>
+                  {" · "}
+                  {formatCurrency(minimo)} – {formatCurrency(maximo)}
+                </>
+              )}
+            </p>
+          </button>
         </div>
 
         <div className="shrink-0 text-right">
@@ -110,51 +138,65 @@ const GrupoHistorico = ({ grupo }) => {
           )}
         </div>
 
-        <ChevronDown
-          className={`h-5 w-5 shrink-0 text-muted-foreground transition-smooth ${
-            aberto ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+        <button
+          type="button"
+          onClick={alternar}
+          aria-expanded={aberto}
+          aria-label={aberto ? "Recolher histórico" : "Expandir histórico"}
+          className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-smooth hover:bg-muted hover:text-foreground"
+        >
+          <ChevronDown
+            className={`h-5 w-5 transition-smooth ${aberto ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
 
       {aberto && (
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border p-3 sm:p-4">
           {serie.length > 1 && (
-            <div className="mb-4 h-44">
+            <div className="mb-4 h-56 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={serie} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+                <LineChart
+                  data={serie}
+                  margin={{ top: 8, right: 12, bottom: 4, left: 0 }}
+                >
                   <XAxis
                     dataKey="data"
-                    tickFormatter={formatDate}
+                    // No celular o eixo mostra dd/mm: a data inteira ocupa o
+                    // dobro e o Recharts acabava escondendo quase todos os
+                    // rotulos pra evitar sobreposicao.
+                    tickFormatter={isMobile ? diaMes : formatDate}
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={false}
                     tickLine={false}
-                    minTickGap={24}
+                    minTickGap={isMobile ? 12 : 24}
                   />
                   <YAxis
                     domain={["dataMin", "dataMax"]}
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={false}
                     tickLine={false}
-                    width={56}
-                    tickFormatter={(v) => formatCurrency(v)}
+                    width={isMobile ? 40 : 56}
+                    tickCount={4}
+                    tickFormatter={isMobile ? soNumero : formatCurrency}
                   />
                   <Tooltip content={<DicaGrafico />} />
                   <Line
-                    type="stepAfter"
+                    type="monotone"
                     dataKey="valor"
                     stroke="hsl(var(--dashboard-primary))"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     dot={{ r: 3, fill: "hsl(var(--dashboard-primary))" }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
               {/*
-                `stepAfter` e nao `monotone` de proposito: `precos` so ganha
-                linha quando o valor muda, entao entre dois registros o preco
-                ficou parado. Uma curva suave desenharia uma variacao contínua
-                que nunca existiu.
+                Curva suave (`monotone`). Vale lembrar ao ler: `precos` so ganha
+                linha quando o valor muda, entao entre dois pontos o preco ficou
+                parado — a inclinacao entre eles e desenho, nao dado. Os pontos
+                marcam onde houve mudanca de fato, e a tabela abaixo traz as
+                datas exatas.
               */}
             </div>
           )}

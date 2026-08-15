@@ -20,6 +20,9 @@ const SearchBar = ({ onSearch, autoFocus = false }) => {
   const containerRef = useRef(null);
   const listId = useId();
 
+  // Requisicao de sugestoes em voo, pra `buscar()` conseguir corta-la.
+  const sugestoesEmVoo = useRef(null);
+
   const termo = useDebouncedValue(query, 350);
 
   useEffect(() => {
@@ -32,10 +35,15 @@ const SearchBar = ({ onSearch, autoFocus = false }) => {
     }
 
     const controller = new AbortController();
+    sugestoesEmVoo.current = controller;
     setCarregando(true);
 
     fetchDescriptions(alvo, controller.signal)
       .then((data) => {
+        // O /descricoes leva ~4s. Sem esta guarda, apertar Enter logo depois de
+        // digitar fechava o dropdown e a resposta atrasada o reabria por cima
+        // dos resultados, segundos depois.
+        if (jaBuscado.current === alvo) return;
         setSugestoes(data.slice(0, 50));
         setAberto(data.length > 0);
         setDestaque(-1);
@@ -75,7 +83,11 @@ const SearchBar = ({ onSearch, autoFocus = false }) => {
     setErro("");
     setAberto(false);
     setSugestoes([]);
+    setCarregando(false);
     jaBuscado.current = alvo;
+    // Corta a busca de sugestoes ainda em voo: a partir daqui ela so teria como
+    // atrapalhar — o usuario ja escolheu o que queria.
+    sugestoesEmVoo.current?.abort();
     setQuery(alvo);
     onSearch(alvo, ehEan(alvo) ? "ean" : "descricao");
   };

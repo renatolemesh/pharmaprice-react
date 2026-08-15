@@ -44,8 +44,13 @@ const PriceHistoryFilter = ({ onSearch, carregando }) => {
       onSubmit={enviar}
       className="mb-6 rounded-card border border-border bg-card p-4 shadow-card"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <div className="flex-1">
+      {/*
+        No celular vira grade de duas colunas: empilhar os quatro campos em
+        largura total empurrava o resultado pra fora da primeira tela inteira.
+        As duas datas dividem uma linha, que e como elas sao lidas mesmo.
+      */}
+      <div className="grid grid-cols-2 gap-3 lg:flex lg:items-end">
+        <div className="col-span-2 lg:flex-1">
           <label
             htmlFor="historico-busca"
             className="mb-1.5 block text-xs font-medium text-muted-foreground"
@@ -65,7 +70,7 @@ const PriceHistoryFilter = ({ onSearch, carregando }) => {
           </div>
         </div>
 
-        <div>
+        <div className="col-span-2">
           <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Farmácias
           </span>
@@ -88,7 +93,7 @@ const PriceHistoryFilter = ({ onSearch, carregando }) => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className={campo}
+            className={`${campo} w-full`}
           />
         </div>
 
@@ -104,14 +109,14 @@ const PriceHistoryFilter = ({ onSearch, carregando }) => {
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className={campo}
+            className={`${campo} w-full`}
           />
         </div>
 
         <button
           type="submit"
           disabled={carregando}
-          className="rounded-lg bg-dashboard-primary px-6 py-2.5 text-sm font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60"
+          className="col-span-2 rounded-lg bg-dashboard-primary px-6 py-2.5 text-sm font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60 lg:col-span-1"
         >
           {carregando ? "Buscando..." : "Pesquisar"}
         </button>

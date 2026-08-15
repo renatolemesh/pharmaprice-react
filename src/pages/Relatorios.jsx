@@ -61,7 +61,6 @@ const Relatorios = () => {
     <>
       <PageHeader
         title="Relatórios"
-        description="Extração por farmácia e período. A exportação é feita pelo servidor — o arquivo já vem pronto."
         actions={
           linhas.length > 0 && (
             <>
@@ -122,7 +121,7 @@ const Relatorios = () => {
       {data && (
         <>
           {filtros.priceType === "current" ? (
-            <ResultsTable results={linhas} />
+            <ResultsTable results={linhas} variante="catalogo" />
           ) : (
             <PriceHistoryResults results={linhas} />
           )}
