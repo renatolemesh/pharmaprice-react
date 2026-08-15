@@ -4,7 +4,10 @@ import VerticalMenu from "./components/VerticalMenu";
 import AppRouter from "./AppRouter";
 import { useAuth } from "./contexts/auth";
 
-const ROTAS_PUBLICAS = ["/login", "/register"];
+/* Telas que trazem a própria moldura: a landing tem cabeçalho e rodapé
+   próprios, e as de acesso usam o AuthLayout. Nenhuma delas quer o menu
+   lateral nem o `max-w` do app. */
+const ROTAS_PUBLICAS = ["/", "/login", "/register"];
 
 const App = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);

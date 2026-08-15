@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
 
 export const campoClasse =
   "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-foreground outline-none transition-smooth placeholder:text-muted-foreground/60 focus:border-dashboard-primary focus:ring-2 focus:ring-dashboard-primary/30";
@@ -13,11 +14,15 @@ const AuthLayout = ({ title, subtitle, children }) => (
   <div className="gradient-background flex min-h-screen items-center justify-center p-4">
     <div className="w-full max-w-md">
       <div className="mb-6 text-center">
-        <img
-          src="/logo.png"
-          alt="PharmaPrice"
-          className="mx-auto mb-4 h-12 w-auto"
-        />
+        {/* A logo volta para a apresentação: sem isto, quem abre /login direto
+            não tem caminho de volta para a página que explica o produto. */}
+        <Link to="/" className="inline-block">
+          <img
+            src="/logo.png"
+            alt="PharmaPrice"
+            className="mx-auto mb-4 h-12 w-auto"
+          />
+        </Link>
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         {subtitle && (
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>

@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/auth";
 import { TableSkeleton } from "./components/ui/feedback";
+import Landing from "./pages/Landing";
 import Precos from "./pages/Precos";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -66,7 +67,11 @@ const admin = (element) => (
 
 const AppRouter = () => (
   <Routes>
-    <Route path="/" element={<Navigate to="/precos" replace />} />
+    {/* A raiz é a apresentação, não um atalho para o app: quem chega sem
+        sessão precisa de uma tela que explique o produto. Ela não redireciona
+        quem já está logado — o botão dela é que muda para "Abrir o painel",
+        senão o dono do site nunca conseguiria rever a própria landing. */}
+    <Route path="/" element={<Landing />} />
     <Route path="/precos" element={admin(<Precos />)} />
     <Route path="/produto/:ean" element={admin(<Produto />)} />
     <Route path="/historico" element={admin(<Historico />)} />

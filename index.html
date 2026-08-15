@@ -4,10 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/cruz_svg.svg" />
+    <!-- A raiz agora é a apresentação, então estas tags são o que aparece no
+         buscador e no card de link compartilhado. -->
     <meta
       name="description"
-      content="Comparador de preços de medicamentos entre farmácias."
+      content="Compare o preço de medicamentos em 8 redes de farmácia, com histórico de cada mudança de preço desde 2024."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PharmaPrice — o preço de cada farmácia, lado a lado" />
+    <meta
+      property="og:description"
+      content="Compare o preço de medicamentos em 8 redes de farmácia, com histórico de cada mudança de preço desde 2024."
+    />
+    <meta property="og:image" content="/screenshots/comparar.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- A busca leva alguns segundos no servidor; abrir a conexão desde já
          economiza o DNS + TLS da primeira requisição. -->
     <link rel="preconnect" href="https://api.pharmaprices.shop" crossorigin />
