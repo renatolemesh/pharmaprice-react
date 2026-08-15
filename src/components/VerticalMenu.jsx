@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/auth";
 import { useTheme } from "../contexts/theme";
+import IconeWhatsApp from "./ui/IconeWhatsApp";
+import { WHATSAPP_SUPORTE } from "../utils/contato";
 
 const ITENS = [
   { to: "/dashboard", label: "Painel", icon: BarChart3 },
@@ -112,6 +114,20 @@ const VerticalMenu = ({ isOpen, onToggleMenu }) => {
         </nav>
 
         <div className="space-y-1 border-t border-sidebar-border p-3">
+          {/* Suporte é o mesmo WhatsApp do site. Sai numa aba nova, e não como
+              rota, porque leva para fora do app. */}
+          <a
+            href={WHATSAPP_SUPORTE}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={fechar}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/80 transition-smooth hover:bg-sidebar-accent/60 hover:text-white"
+            title={!isOpen ? "Suporte no WhatsApp" : undefined}
+          >
+            <IconeWhatsApp className="h-5 w-5 shrink-0" />
+            <span className={isOpen ? "" : "md:hidden"}>Suporte</span>
+          </a>
+
           <button
             type="button"
             onClick={toggleTheme}
