@@ -1,67 +1,80 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { useDashboard } from '../../contexts/DashboardContext';
+import PropTypes from "prop-types";
+import { TrendingDown, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useDashboard } from "../../contexts/dashboard";
+import { formatCurrency } from "../../utils/format";
 
-const ProductList = ({ items, type }) => (
-  <div className="space-y-3">
-    {items.length === 0 ? (
-      <p className="text-sm text-muted-foreground text-center py-4">
-        Nenhum produto encontrado
+const ProductList = ({ items = [], type }) => {
+  if (items.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Nenhum produto no período
       </p>
-    ) : (
-      items.map((item, index) => (
-        <div 
-          key={index}
-          className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/50 hover:to-muted/20 transition-all duration-300"
+    );
+  }
+
+  const queda = type === "decrease";
+
+  return (
+    <ul className="space-y-2">
+      {items.map((item, index) => (
+        <li
+          key={`${item.product_name}-${item.pharmacy_name}-${index}`}
+          className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 p-3 transition-smooth hover:bg-muted/70"
         >
-          <div className="flex-1">
-            <h4 className="font-medium text-sm mb-1">{item.product_name}</h4>
-            <span className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium" title={item.product_name}>
+              {item.product_name}
+            </p>
+            <span className="text-xs text-muted-foreground">
               {item.pharmacy_name}
             </span>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-xs line-through text-muted-foreground">
-                R$ {parseFloat(item.previous_price).toFixed(2)}
-              </p>
-              <p className="font-semibold text-sm">
-                R$ {parseFloat(item.current_price).toFixed(2)}
-              </p>
-            </div>
-            
-            <div className={`flex items-center space-x-1 px-2.5 py-1 rounded-full ${
-              type === 'decrease'
-                ? 'bg-dashboard-success/10 text-dashboard-success' 
-                : 'bg-dashboard-danger/10 text-dashboard-danger'
-            }`}>
-              {type === 'decrease' ? (
-                <TrendingDown className="w-4 h-4" />
-              ) : (
-                <TrendingUp className="w-4 h-4" />
-              )}
-              <span className="font-semibold text-sm">
-                {Math.abs(parseFloat(item.variation_percent))}%
-              </span>
-            </div>
+
+          <div className="shrink-0 text-right">
+            <p className="tabular text-xs text-muted-foreground line-through">
+              {formatCurrency(item.previous_price)}
+            </p>
+            <p className="tabular text-sm font-semibold">
+              {formatCurrency(item.current_price)}
+            </p>
           </div>
-        </div>
-      ))
-    )}
-  </div>
-);
+
+          <span
+            className={`tabular flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              queda
+                ? "bg-dashboard-success/10 text-dashboard-success"
+                : "bg-dashboard-danger/10 text-dashboard-danger"
+            }`}
+          >
+            {queda ? (
+              <TrendingDown className="h-3.5 w-3.5" />
+            ) : (
+              <TrendingUp className="h-3.5 w-3.5" />
+            )}
+            {Math.abs(Number(item.variation_percent) || 0).toFixed(1)}%
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+ProductList.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.object),
+  type: PropTypes.oneOf(["increase", "decrease"]).isRequired,
+};
 
 export const TopProductsTable = () => {
   const { topProducts } = useDashboard();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-dashboard-danger" />
-            Maiores Aumentos
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-dashboard-danger" />
+            Maiores aumentos
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -69,11 +82,11 @@ export const TopProductsTable = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <TrendingDown className="w-5 h-5 text-dashboard-success" />
-            Maiores Reduções
+          <CardTitle className="flex items-center gap-2">
+            <TrendingDown className="h-4 w-4 text-dashboard-success" />
+            Maiores reduções
           </CardTitle>
         </CardHeader>
         <CardContent>

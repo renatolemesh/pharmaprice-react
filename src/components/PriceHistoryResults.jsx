@@ -1,216 +1,242 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUpIcon, CalendarIcon, CopyIcon } from 'lucide-react';
+import { useMemo, useState } from "react";
+import PropTypes from "prop-types";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChevronDown, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { formatCurrency, formatDate } from "../utils/format";
+import { EmptyState } from "./ui/feedback";
 
-const ResponsivePriceHistoryResults = ({ results }) => {
-  const [isMobile, setIsMobile] = useState(false);
-  const [copyIconColors, setCopyIconColors] = useState({});
+const numero = (valor) => {
+  const n = Number(String(valor ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : Number.NaN;
+};
 
-  // Check if screen is mobile size
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
-
-  const formatDate = (dateString) => {
-    const dateParts = dateString.split('-');
-    const year = dateParts[0];
-    const month = dateParts[1];
-    const day = dateParts[2];
-    return `${day}/${month}/${year}`;
-  };
-
-  const copyToClipboard = (ean) => {
-    navigator.clipboard.writeText(ean);
-    setCopyIconColors((prev) => ({ ...prev, [ean]: 'text-green-500' }));
-
-    setTimeout(() => {
-      setCopyIconColors((prev) => ({ ...prev, [ean]: 'text-gray-500' }));
-    }, 500);
-  };
-
-  // Mobile Card Layout
-  const MobileCard = ({ result, index }) => (
-    <div key={index} className="bg-white border border-gray-300 rounded-lg p-4 mb-4 shadow-sm">
-      {/* Header with pharmacy and EAN */}
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="font-semibold text-lg text-blue-600 mb-1">{result.nome_farmacia}</h3>
-          <div className="flex items-center text-sm text-gray-600">
-            <span className="mr-2">EAN: {result.EAN}</span>
-            <CopyIcon
-              className={`w-4 h-4 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-              onClick={() => copyToClipboard(result.EAN)}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Product description */}
-      <p className="text-gray-700 text-sm mb-3 leading-relaxed">{result.descricao}</p>
-      
-      {/* Price history */}
-      <div className="space-y-2">
-        <h4 className="font-medium text-gray-800 flex items-center">
-          <TrendingUpIcon className="w-4 h-4 mr-1" />
-          Histórico de Preços
-        </h4>
-        <div className="space-y-2">
-          {result.precos.map((precoData, i) => (
-            <div key={i} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <span className="font-semibold text-green-600">R$ {precoData.preco}</span>
-              <div className="flex items-center text-sm text-gray-500">
-                <CalendarIcon className="w-3 h-3 mr-1" />
-                {formatDate(precoData.data)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Desktop Table Layout
-  const DesktopTable = () => (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse border border-gray-300 min-w-[900px]">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Farmácia</th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Descrição</th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">EAN</th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Preços</th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Datas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {results.map((result, index) => (
-            <tr key={index} className="hover:bg-gray-50">
-              <td className="border border-gray-300 p-0 align-top">
-                <div className="px-3 py-2 font-medium">{result.nome_farmacia}</div>
-              </td>
-              <td className="border border-gray-300 p-0 align-top">
-                <div className="px-3 py-2 text-sm max-w-xs">
-                  <div className="line-clamp-3" title={result.descricao}>
-                    {result.descricao}
-                  </div>
-                </div>
-              </td>
-              <td className="border border-gray-300 p-0 align-top">
-                <div className="px-3 py-2 text-sm">
-                  <div className="flex items-center">
-                    <span className="mr-2">{result.EAN}</span>
-                    <CopyIcon
-                      className={`w-4 h-4 cursor-pointer flex-shrink-0 ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-                      onClick={() => copyToClipboard(result.EAN)}
-                    />
-                  </div>
-                </div>
-              </td>
-              <td className="border border-gray-300 p-0">
-                {result.precos.map((precoData, i) => (
-                  <div key={i} className={`px-3 py-2 text-sm font-semibold text-green-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                    R$ {precoData.preco}
-                  </div>
-                ))}
-              </td>
-              <td className="border border-gray-300 p-0">
-                {result.precos.map((precoData, i) => (
-                  <div key={i} className={`px-3 py-2 text-sm text-gray-600 ${i < result.precos.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                    {formatDate(precoData.data)}
-                  </div>
-                ))}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  // Compact Mobile Table (alternative layout)
-  const CompactMobileTable = () => (
-    <div className="space-y-4">
-      {results.map((result, index) => (
-        <div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
-          {/* Product header */}
-          <div className="bg-gray-50 p-3 border-b border-gray-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold text-blue-600">{result.nome_farmacia}</h3>
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{result.descricao}</p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center text-xs text-gray-500">
-                  <span className="mr-1">EAN: {result.EAN}</span>
-                  <CopyIcon
-                    className={`w-3 h-3 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-                    onClick={() => copyToClipboard(result.EAN)}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Price history table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-25">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Preço</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.precos.map((precoData, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-25'}>
-                    <td className="px-3 py-2 text-sm font-semibold text-green-600">
-                      R$ {precoData.preco}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-600">
-                      {formatDate(precoData.data)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  if (!results || results.length === 0) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        <TrendingUpIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-        <p>Nenhum histórico de preços encontrado</p>
-      </div>
-    );
-  }
-
+const DicaGrafico = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const ponto = payload[0].payload;
   return (
-    <div className="p-2 sm:p-4">
-      {/* Conditional rendering based on screen size */}
-      {isMobile ? (
-        <div className="space-y-1">
-          {/* Toggle between card and compact table view */}
-          <div className="mb-3">
-            <div className="text-xs text-gray-500 mb-2">Visualização móvel otimizada</div>
-          </div>
-          <CompactMobileTable />
-        </div>
-      ) : (
-        <DesktopTable />
-      )}
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-hover">
+      <p className="text-xs text-muted-foreground">{formatDate(ponto.data)}</p>
+      <p className="tabular font-semibold">{formatCurrency(ponto.preco)}</p>
     </div>
   );
 };
 
-export default ResponsivePriceHistoryResults;
+DicaGrafico.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.arrayOf(PropTypes.object),
+};
 
+const GrupoHistorico = ({ grupo }) => {
+  const [aberto, setAberto] = useState(false);
+
+  const { serie, ultimo, minimo, maximo, variacao } = useMemo(() => {
+    const pontos = [...(grupo.precos ?? [])]
+      .map((p) => ({ ...p, valor: numero(p.preco) }))
+      .filter((p) => Number.isFinite(p.valor))
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+
+    const valores = pontos.map((p) => p.valor);
+    const inicio = valores[0];
+    const fim = valores[valores.length - 1];
+
+    return {
+      serie: pontos,
+      ultimo: fim,
+      minimo: valores.length ? Math.min(...valores) : null,
+      maximo: valores.length ? Math.max(...valores) : null,
+      variacao:
+        Number.isFinite(inicio) && inicio > 0 && Number.isFinite(fim)
+          ? ((fim / inicio - 1) * 100)
+          : null,
+    };
+  }, [grupo]);
+
+  const subiu = variacao > 0.5;
+  const caiu = variacao < -0.5;
+  const Icone = subiu ? TrendingUp : caiu ? TrendingDown : Minus;
+  const corVariacao = subiu
+    ? "text-dashboard-danger"
+    : caiu
+      ? "text-dashboard-success"
+      : "text-muted-foreground";
+
+  return (
+    <article className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full items-center gap-4 p-4 text-left transition-smooth hover:bg-muted/40"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-dashboard-primary/10 px-2 py-0.5 text-xs font-medium text-dashboard-primary">
+              {grupo.nome_farmacia}
+            </span>
+            <span className="tabular text-xs text-muted-foreground">
+              {grupo.EAN}
+            </span>
+          </div>
+          <p className="truncate text-sm font-medium" title={grupo.descricao}>
+            {grupo.descricao}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {serie.length} {serie.length === 1 ? "mudança" : "mudanças"} de preço
+            {minimo !== null && (
+              <>
+                {" · "}mín. {formatCurrency(minimo)} · máx. {formatCurrency(maximo)}
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className="tabular text-lg font-bold">{formatCurrency(ultimo)}</p>
+          {variacao !== null && (
+            <p
+              className={`flex items-center justify-end gap-1 text-xs font-medium ${corVariacao}`}
+            >
+              <Icone className="h-3.5 w-3.5" />
+              {variacao > 0 ? "+" : ""}
+              {variacao.toFixed(1)}%
+            </p>
+          )}
+        </div>
+
+        <ChevronDown
+          className={`h-5 w-5 shrink-0 text-muted-foreground transition-smooth ${
+            aberto ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {aberto && (
+        <div className="border-t border-border p-4">
+          {serie.length > 1 && (
+            <div className="mb-4 h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={serie} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+                  <XAxis
+                    dataKey="data"
+                    tickFormatter={formatDate}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={24}
+                  />
+                  <YAxis
+                    domain={["dataMin", "dataMax"]}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={56}
+                    tickFormatter={(v) => formatCurrency(v)}
+                  />
+                  <Tooltip content={<DicaGrafico />} />
+                  <Line
+                    type="stepAfter"
+                    dataKey="valor"
+                    stroke="hsl(var(--dashboard-primary))"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "hsl(var(--dashboard-primary))" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              {/*
+                `stepAfter` e nao `monotone` de proposito: `precos` so ganha
+                linha quando o valor muda, entao entre dois registros o preco
+                ficou parado. Uma curva suave desenharia uma variacao contínua
+                que nunca existiu.
+              */}
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="py-2 font-medium">Data</th>
+                  <th className="py-2 text-right font-medium">Preço</th>
+                  <th className="py-2 text-right font-medium">Variação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...serie].reverse().map((ponto, i, arr) => {
+                  const anterior = arr[i + 1]?.valor;
+                  const delta =
+                    Number.isFinite(anterior) && anterior > 0
+                      ? (ponto.valor / anterior - 1) * 100
+                      : null;
+                  return (
+                    <tr
+                      key={`${ponto.data}-${i}`}
+                      className="border-b border-border/50 last:border-b-0"
+                    >
+                      <td className="py-2 text-muted-foreground">
+                        {formatDate(ponto.data)}
+                      </td>
+                      <td className="tabular py-2 text-right font-medium">
+                        {formatCurrency(ponto.valor)}
+                      </td>
+                      <td
+                        className={`tabular py-2 text-right ${
+                          delta === null
+                            ? "text-muted-foreground"
+                            : delta > 0
+                              ? "text-dashboard-danger"
+                              : "text-dashboard-success"
+                        }`}
+                      >
+                        {delta === null
+                          ? "—"
+                          : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+};
+
+GrupoHistorico.propTypes = { grupo: PropTypes.object.isRequired };
+
+const PriceHistoryResults = ({ results = [] }) => {
+  if (results.length === 0) {
+    return (
+      <EmptyState
+        title="Nenhum histórico encontrado"
+        description="Lembre-se: só é registrada a mudança de preço. Produto com preço estável no período não gera linha."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {results.map((grupo, index) => (
+        <GrupoHistorico
+          key={`${grupo.EAN}-${grupo.nome_farmacia}-${index}`}
+          grupo={grupo}
+        />
+      ))}
+    </div>
+  );
+};
+
+PriceHistoryResults.propTypes = {
+  results: PropTypes.arrayOf(PropTypes.object),
+};
+
+export default PriceHistoryResults;

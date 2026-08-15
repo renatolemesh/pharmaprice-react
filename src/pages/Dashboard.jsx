@@ -1,149 +1,163 @@
-import { DashboardProvider, useDashboard } from '../contexts/DashboardContext';
-import { MetricCard } from '../components/dashboard/MetricCard';
-import { DonutChart } from '../components/dashboard/DonutChart';
-import { TopProductsTable } from '../components/dashboard/TopProductsTable';
-import { TrendsChart } from '../components/dashboard/TrendsChart';
-import { formatNumberToBRL } from '../utils/helper.js';
-import { 
-  Package, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
+import {
+  Clock,
   Database,
-  RefreshCw 
-} from 'lucide-react';
+  Package,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { useDashboard } from "../contexts/dashboard";
+import DashboardProvider from "../contexts/DashboardProvider";
+import { MetricCard } from "../components/dashboard/MetricCard";
+import { DonutChart } from "../components/dashboard/DonutChart";
+import { TopProductsTable } from "../components/dashboard/TopProductsTable";
+import { TrendsChart } from "../components/dashboard/TrendsChart";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import PageHeader from "../components/ui/PageHeader";
+import { ErrorState } from "../components/ui/feedback";
+import { formatNumberToBRL } from "../utils/format";
+
+const CardEsqueleto = () => (
+  <div className="skeleton h-[132px] rounded-card" />
+);
 
 const DashboardContent = () => {
-  const { statistics, pharmacyStats, topProducts, loading } = useDashboard();
+  const { statistics, pharmacyStats, topProducts, loading, error, refresh } =
+    useDashboard();
 
-  const topDecrease = topProducts.top_prices_decrease?.[0]?.variation_percent || '-';
-  const topIncrease = topProducts.top_prices_increase?.[0]?.variation_percent || '-';
-
-  if (loading) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-dashboard-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg">Carregando dados do painel...</p>
-        </div>
-      </div>
+      <>
+        <PageHeader title="Painel de Análises" />
+        <ErrorState message={error} onRetry={refresh} />
+      </>
     );
   }
 
+  const maiorQueda = topProducts.top_prices_decrease?.[0]?.variation_percent;
+  const maiorAumento = topProducts.top_prices_increase?.[0]?.variation_percent;
+  const lider = pharmacyStats[0];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-dashboard-primary via-dashboard-secondary to-dashboard-accent bg-clip-text text-transparent mb-2">
-            Painel de Análises
-          </h1>
-          <p className="text-muted-foreground font-medium mt-5 text-lg font-semibold">
-            Visão abrangente dos dados de preços e tendências das farmácias
-          </p>
+    <>
+      <PageHeader
+        title="Painel de Análises"
+        description="Visão geral dos preços e das tendências das farmácias monitoradas."
+        actions={
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium transition-smooth hover:bg-muted disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        {loading
+          ? Array.from({ length: 6 }, (_, i) => <CardEsqueleto key={i} />)
+          : [
+              <MetricCard
+                key="atualizados"
+                title="Atualizados na semana"
+                value={formatNumberToBRL(statistics.updated_products || 0)}
+                change={statistics.updated_products_change}
+                icon={<RefreshCw className="h-5 w-5 text-dashboard-primary" />}
+              />,
+              <MetricCard
+                key="variacao"
+                title="Variação média"
+                value={statistics.average_variation ?? 0}
+                suffix="%"
+                change={statistics.average_variation_change}
+                inverso
+                icon={<TrendingUp className="h-5 w-5 text-dashboard-warning" />}
+              />,
+              <MetricCard
+                key="aumentos"
+                title="Aumentos de preço"
+                value={formatNumberToBRL(statistics.price_increases || 0)}
+                change={statistics.price_increases_change}
+                inverso
+                icon={<TrendingUp className="h-5 w-5 text-dashboard-danger" />}
+              />,
+              <MetricCard
+                key="reducoes"
+                title="Reduções de preço"
+                value={formatNumberToBRL(statistics.price_decreases || 0)}
+                change={statistics.price_decreases_change}
+                icon={<TrendingDown className="h-5 w-5 text-dashboard-success" />}
+              />,
+              <MetricCard
+                key="tempo"
+                title="Tempo médio p/ alteração"
+                value={statistics.average_change_time ?? 0}
+                suffix="dias"
+                change={statistics.average_change_time_change}
+                icon={<Clock className="h-5 w-5 text-dashboard-accent" />}
+              />,
+              <MetricCard
+                key="total"
+                title="Total de produtos"
+                value={formatNumberToBRL(statistics.total_products || 0)}
+                icon={<Package className="h-5 w-5 text-dashboard-secondary" />}
+              />,
+            ]}
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <TrendsChart />
+        <DonutChart />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <TopProductsTable />
         </div>
 
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <div className="space-y-4">
           <MetricCard
-            title="Produtos Atualizados na Última Semana"
-            value={formatNumberToBRL(statistics.updated_products || 0)}
-            change={statistics.updated_products_change}
-            changeType={statistics.updated_products_change >= 0 ? 'increase' : 'decrease'}
-            trend={statistics.updated_products_change >= 0 ? 'up' : 'down'}
-            icon={<RefreshCw className="w-6 h-6 text-dashboard-primary" />}
-          />
-          
-          <MetricCard
-            title="Variação Média de Preços"
-            value={(statistics.average_variation || 0) + '%'}
-            change={statistics.average_variation_change}
-            changeType={statistics.average_variation_change >= 0 ? 'increase' : 'decrease'}
-            trend={statistics.average_variation_change >= 0 ? 'up' : 'down'}
-            icon={<TrendingDown className="w-6 h-6 text-dashboard-danger" />}
-          />
-          
-          <MetricCard
-            title="Aumentos de Preço"
-            value={formatNumberToBRL(statistics.price_increases || 0)}
-            change={statistics.price_increases_change}
-            changeType={statistics.price_increases_change >= 0 ? 'increase' : 'decrease'}
-            trend={statistics.price_increases_change >= 0 ? 'up' : 'down'}
-            icon={<TrendingUp className="w-6 h-6 text-dashboard-success" />}
-          />
-          
-          <MetricCard
-            title="Reduções de Preço"
-            value={formatNumberToBRL(statistics.price_decreases || 0)}
-            change={statistics.price_decreases_change}
-            changeType={statistics.price_decreases_change >= 0 ? 'increase' : 'decrease'}
-            trend={statistics.price_decreases_change >= 0 ? 'up' : 'down'}
-            icon={<TrendingDown className="w-6 h-6 text-dashboard-danger" />}
-          />
-          
-          <MetricCard
-            title="Tempo Médio para Alteração"
-            value={(statistics.average_change_time || 0) + ' dias'}
-            change={statistics.average_change_time_change}
-            changeType={statistics.average_change_time_change >= 0 ? 'increase' : 'decrease'}
-            trend={statistics.average_change_time_change >= 0 ? 'up' : 'down'}
-            icon={<Clock className="w-6 h-6 text-dashboard-accent" />}
+            title="Preços armazenados"
+            value={formatNumberToBRL(statistics.total_prices_stored || 0)}
+            icon={<Database className="h-5 w-5 text-dashboard-primary" />}
           />
 
-          <MetricCard
-            title="Total de Produtos"
-            value={formatNumberToBRL(statistics.total_products || 0)}
-            change={null}
-            icon={<Package className="w-6 h-6 text-dashboard-secondary" />}
-            showPercentage={false}
-          />
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <TrendsChart />
-          <DonutChart />
-        </div>
-
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <TopProductsTable />
-          </div>
-          
-          <div className="space-y-6">
-            <MetricCard
-              title="Total de Preços Armazenados"
-              value={formatNumberToBRL(statistics.total_prices_stored || 0)}
-              change={null}
-              showPercentage={false}
-              icon={<Database className="w-6 h-6 text-dashboard-primary" />}
-            />
-            
-            <div className="bg-gradient-to-br from-dashboard-primary/5 to-dashboard-secondary/5 rounded-xl p-6 border border-dashboard-primary/10">
-              <h3 className="font-semibold mb-3 text-dashboard-primary">Estatísticas Rápidas</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Farmácia Mais Atualizada:</span>
-                  <span className="font-medium">
-                    {pharmacyStats[0]?.pharmacy_name ?? '-'} 
-                    {pharmacyStats[0] && ' (' + formatNumberToBRL(pharmacyStats[0].updated_products) + ')'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Maior Queda de Preço:</span>
-                  <span className="font-medium text-dashboard-success">{topDecrease}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Maior Aumento de Preço:</span>
-                  <span className="font-medium text-dashboard-danger">{topIncrease}%</span>
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumo rápido</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-muted-foreground">Farmácia mais ativa</span>
+                <span className="text-right font-medium">
+                  {lider?.pharmacy_name ?? "-"}
+                  {lider && (
+                    <span className="tabular block text-xs text-muted-foreground">
+                      {formatNumberToBRL(lider.updated_products)} produtos
+                    </span>
+                  )}
+                </span>
               </div>
-            </div>
-          </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Maior queda</span>
+                <span className="tabular font-medium text-dashboard-success">
+                  {maiorQueda != null ? `${maiorQueda}%` : "-"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Maior aumento</span>
+                <span className="tabular font-medium text-dashboard-danger">
+                  {maiorAumento != null ? `${maiorAumento}%` : "-"}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -1,182 +1,250 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Enhanced Dashboard Design System - Professional Healthcare Analytics Theme */
+/* ---------------------------------------------------------------------------
+   PharmaPrice — Design System
+
+   Os tokens ficam como triplas HSL cruas (`215 85% 55%`) e nao como cores
+   prontas de proposito: o Recharts le varios deles direto do JS na forma
+   `hsl(var(--dashboard-danger))`, e uma cor ja resolvida quebraria essas
+   chamadas. O bloco `@theme inline` abaixo e o que transforma essas triplas em
+   utilitarios do Tailwind (`bg-card`, `text-dashboard-primary`, ...).
+
+   `inline` importa: sem ele o utilitario apontaria para a variavel do tema em
+   vez do valor, e a troca de tema no `.dark` deixaria de propagar.
+--------------------------------------------------------------------------- */
 @layer base {
   :root {
-    /* Background & Base Colors - Clean, modern medical/tech aesthetic */
+    color-scheme: light;
+
+    /* Base */
     --background: 220 20% 98%;
     --foreground: 220 15% 12%;
-    
-    /* Dashboard Primary Colors - Professional blue with healthcare trust */
-    --dashboard-primary: 215 85% 55%;        /* Professional medical blue */
-    --dashboard-primary-light: 215 75% 65%;  /* Lighter variant */
-    --dashboard-secondary: 185 80% 50%;      /* Complementary teal */
-    --dashboard-accent: 275 70% 60%;         /* Modern purple accent */
-    
-    /* Status Colors - Clear visual hierarchy */
-    --dashboard-success: 142 85% 45%;        /* Success green */
-    --dashboard-warning: 38 90% 55%;         /* Warning amber */
-    --dashboard-danger: 358 85% 55%;         /* Error red */
-    
-    /* Neutral Colors - Sophisticated grays */
-    --card: 220 15% 99%;
+
+    /* Marca — azul clinico, com apoio em teal e roxo */
+    --dashboard-primary: 215 85% 55%;
+    --dashboard-primary-light: 215 75% 65%;
+    --dashboard-secondary: 185 80% 50%;
+    --dashboard-accent: 275 70% 60%;
+
+    /* Status */
+    --dashboard-success: 142 72% 38%;
+    --dashboard-warning: 38 90% 48%;
+    --dashboard-danger: 358 75% 50%;
+
+    /* Superficies */
+    --card: 0 0% 100%;
     --card-foreground: 220 15% 15%;
     --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted-foreground: 220 10% 42%;
     --border: 220 20% 88%;
-    
-    /* Interactive Elements */
+
+    /* Interativos */
     --primary: 215 85% 55%;
     --primary-foreground: 220 15% 98%;
     --secondary: 220 15% 92%;
     --secondary-foreground: 220 15% 20%;
-    
-    /* Accent & Supporting Colors */
     --accent: 220 15% 95%;
     --accent-foreground: 220 15% 20%;
-    --popover: 220 15% 99%;
+    --popover: 0 0% 100%;
     --popover-foreground: 220 15% 15%;
-    
-    /* Form Elements */
+
+    /* Formulario */
     --input: 220 20% 92%;
     --ring: 215 85% 55%;
-    --destructive: 358 85% 55%;
+    --destructive: 358 75% 50%;
     --destructive-foreground: 220 15% 98%;
-    
-    /* Enhanced Gradients */
+
+    /* Navegacao lateral */
+    --sidebar: 222 30% 13%;
+    --sidebar-foreground: 220 15% 88%;
+    --sidebar-muted: 220 12% 60%;
+    --sidebar-accent: 222 25% 20%;
+    --sidebar-border: 222 22% 22%;
+
+    /* Gradientes */
     --gradient-primary: linear-gradient(135deg, hsl(215 85% 55%), hsl(185 80% 50%));
-    --gradient-card: linear-gradient(135deg, hsl(220 15% 99%) 0%, hsl(220 20% 96%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 85% 45%), hsl(142 75% 55%));
-    --gradient-danger: linear-gradient(135deg, hsl(358 85% 55%), hsl(358 75% 65%));
-    --gradient-background: linear-gradient(135deg, hsl(220 20% 98%) 0%, hsl(215 25% 95%) 100%);
-    
-    /* Professional Shadows */
-    --shadow-card: 0 2px 16px -4px hsl(215 85% 55% / 0.08);
-    --shadow-metric: 0 4px 24px -6px hsl(215 85% 55% / 0.12);
-    --shadow-hover: 0 8px 32px -8px hsl(215 85% 55% / 0.15);
-    
-    /* Animation Variables */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    
-    /* Border Radius */
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(220 20% 97%) 100%);
+    --gradient-background: linear-gradient(160deg, hsl(220 20% 98%) 0%, hsl(215 25% 95%) 100%);
+
+    /* Sombras */
+    --shadow-card: 0 1px 2px hsl(220 20% 40% / 0.04), 0 4px 16px -6px hsl(215 85% 55% / 0.1);
+    --shadow-metric: 0 2px 4px hsl(220 20% 40% / 0.04), 0 12px 28px -10px hsl(215 85% 55% / 0.16);
+    --shadow-hover: 0 4px 8px hsl(220 20% 40% / 0.06), 0 18px 40px -12px hsl(215 85% 55% / 0.22);
+
     --radius: 0.75rem;
-    
-    /* Sidebar Colors */
-    --sidebar-background: 220 15% 97%;
-    --sidebar-foreground: 220 15% 25%;
-    --sidebar-primary: 215 85% 55%;
-    --sidebar-primary-foreground: 220 15% 98%;
-    --sidebar-accent: 220 15% 93%;
-    --sidebar-accent-foreground: 220 15% 25%;
-    --sidebar-border: 220 20% 88%;
-    --sidebar-ring: 215 85% 55%;
   }
 
   .dark {
-    /* Dark Theme - Professional and easy on the eyes */
-    --background: 220 25% 8%;
+    color-scheme: dark;
+
+    --background: 222 30% 8%;
     --foreground: 220 15% 92%;
-    
-    /* Dashboard Colors - Adjusted for dark theme */
+
     --dashboard-primary: 215 80% 65%;
     --dashboard-primary-light: 215 70% 75%;
     --dashboard-secondary: 185 75% 60%;
     --dashboard-accent: 275 65% 70%;
-    
-    /* Status Colors - Higher contrast for dark theme */
-    --dashboard-success: 142 80% 55%;
-    --dashboard-warning: 38 85% 65%;
-    --dashboard-danger: 358 80% 65%;
-    
-    /* Dark Theme Neutrals */
-    --card: 220 25% 10%;
+
+    --dashboard-success: 142 65% 52%;
+    --dashboard-warning: 38 85% 62%;
+    --dashboard-danger: 358 78% 66%;
+
+    --card: 222 26% 12%;
     --card-foreground: 220 15% 90%;
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 10% 65%;
-    --border: 220 20% 20%;
-    
-    /* Interactive Elements - Dark */
+    --muted: 222 20% 18%;
+    --muted-foreground: 220 10% 62%;
+    --border: 222 20% 22%;
+
     --primary: 215 80% 65%;
-    --primary-foreground: 220 25% 8%;
-    --secondary: 220 20% 18%;
+    --primary-foreground: 222 30% 8%;
+    --secondary: 222 20% 18%;
     --secondary-foreground: 220 15% 88%;
-    
-    /* Dark Accents */
-    --accent: 220 20% 16%;
+    --accent: 222 20% 16%;
     --accent-foreground: 220 15% 88%;
-    --popover: 220 25% 10%;
+    --popover: 222 26% 13%;
     --popover-foreground: 220 15% 90%;
-    
-    /* Dark Form Elements */
-    --input: 220 20% 18%;
+
+    --input: 222 20% 20%;
     --ring: 215 80% 65%;
-    --destructive: 358 80% 65%;
+    --destructive: 358 78% 66%;
     --destructive-foreground: 220 15% 92%;
-    
-    /* Dark Gradients */
+
+    --sidebar: 222 32% 10%;
+    --sidebar-foreground: 220 15% 86%;
+    --sidebar-muted: 220 10% 55%;
+    --sidebar-accent: 222 26% 18%;
+    --sidebar-border: 222 22% 20%;
+
     --gradient-primary: linear-gradient(135deg, hsl(215 80% 65%), hsl(185 75% 60%));
-    --gradient-card: linear-gradient(135deg, hsl(220 25% 10%) 0%, hsl(220 20% 14%) 100%);
-    --gradient-background: linear-gradient(135deg, hsl(220 25% 8%) 0%, hsl(215 20% 12%) 100%);
-    
-    /* Dark Shadows */
-    --shadow-card: 0 2px 16px -4px hsl(0 0% 0% / 0.25);
-    --shadow-metric: 0 4px 24px -6px hsl(0 0% 0% / 0.35);
-    --shadow-hover: 0 8px 32px -8px hsl(0 0% 0% / 0.45);
-    
-    /* Dark Sidebar */
-    --sidebar-background: 220 25% 9%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-primary: 215 80% 65%;
-    --sidebar-primary-foreground: 220 25% 8%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 220 15% 85%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 215 80% 65%;
+    --gradient-card: linear-gradient(135deg, hsl(222 26% 12%) 0%, hsl(222 22% 15%) 100%);
+    --gradient-background: linear-gradient(160deg, hsl(222 30% 8%) 0%, hsl(220 26% 11%) 100%);
+
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3), 0 4px 16px -6px hsl(0 0% 0% / 0.4);
+    --shadow-metric: 0 2px 4px hsl(0 0% 0% / 0.3), 0 12px 28px -10px hsl(0 0% 0% / 0.5);
+    --shadow-hover: 0 4px 8px hsl(0 0% 0% / 0.35), 0 18px 40px -12px hsl(0 0% 0% / 0.6);
   }
 }
 
-/* Custom utility classes for enhanced dashboard styling */
-@layer utilities {
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-  
-  .gradient-card {
-    background: var(--gradient-card);
-  }
-  
-  .gradient-background {
-    background: var(--gradient-background);
-  }
-  
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
-  
-  .shadow-metric {
-    box-shadow: var(--shadow-metric);
-  }
-  
-  .shadow-hover {
-    box-shadow: var(--shadow-hover);
-  }
-  
-  .transition-smooth {
-    transition: var(--transition-smooth);
-  }
-  
-  .transition-bounce {
-    transition: var(--transition-bounce);
-  }
-  
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
+  --color-dashboard-primary: hsl(var(--dashboard-primary));
+  --color-dashboard-primary-light: hsl(var(--dashboard-primary-light));
+  --color-dashboard-secondary: hsl(var(--dashboard-secondary));
+  --color-dashboard-accent: hsl(var(--dashboard-accent));
+  --color-dashboard-success: hsl(var(--dashboard-success));
+  --color-dashboard-warning: hsl(var(--dashboard-warning));
+  --color-dashboard-danger: hsl(var(--dashboard-danger));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+
+  --radius-card: var(--radius);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-metric: var(--shadow-metric);
+  --shadow-hover: var(--shadow-hover);
 }
 
-/* Additional component-specific enhancements */
-@layer components {
+@layer base {
+  /* O Tailwind 4 mudou o padrao do utilitario `border` de gray-200 para
+     currentColor. Sem esta regra, todo `class="border"` sem cor explicita
+     herdaria a cor do texto. */
+  *,
+  ::after,
+  ::before {
+    border-color: hsl(var(--border));
+  }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Numero de preco alinhado em coluna: sem isso os digitos dancam entre
+     linhas e fica dificil comparar valores de relance, que e o ponto da tela. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@utility gradient-primary {
+  background: var(--gradient-primary);
+}
+
+@utility gradient-card {
+  background: var(--gradient-card);
+}
+
+@utility gradient-background {
+  background: var(--gradient-background);
+}
+
+@utility transition-smooth {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Placeholder de carregamento. Substitui o GIF de spinner em tela cheia, que
+   escondia o layout inteiro e fazia cada busca parecer um recarregamento. */
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.12) 37%,
+    hsl(var(--muted)) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-sweep 1.4s ease infinite;
+}
+
+@keyframes skeleton-sweep {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
 }

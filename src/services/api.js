@@ -1,0 +1,161 @@
+import { getBlob, getJson, postJson } from "./http";
+
+export { BASE_URL, ApiError, clearApiCache } from "./http";
+
+const MINUTO = 60_000;
+
+/* -------------------------------------------------------------------------
+   Farmacias
+   ------------------------------------------------------------------------- */
+
+/**
+ * Lista de farmacias com id, nome e dominio.
+ *
+ * Existe para o front parar de manter mapa fixo de id->nome e id->dominio em
+ * tres arquivos diferentes (ResultsTable, PriceHistoryFilter, ReportFilter),
+ * que era como um dominio trocado na coleta passava meses sem chegar na tela.
+ * Cache de 1h no servidor; 30min aqui.
+ */
+export const fetchFarmacias = (signal) =>
+  getJson("farmacias", { signal, ttl: 30 * MINUTO });
+
+/* -------------------------------------------------------------------------
+   Precos
+   ------------------------------------------------------------------------- */
+
+/**
+ * Preco mais recente de cada par (farmacia, produto), do mais barato pro mais
+ * caro.
+ *
+ * Atencao ao contrato: no PrecoController os filtros sao `if/elseif/elseif` —
+ * ean, senao descricao, senao farmacia. Mandar descricao E farmacia juntos
+ * aplica so a descricao, em silencio e sem erro. Por isso esta funcao aceita um
+ * criterio de busca so: nao ha como o chamador pedir um cruzamento que a API
+ * fingiria atender. Se o backend passar a combinar filtros, e aqui que muda.
+ */
+export const fetchPrecos = (
+  { query, searchType, perPage = 100 } = {},
+  page = 1,
+  signal,
+) =>
+  getJson("precos", {
+    params: { page, per_page: perPage, ...(query ? { [searchType]: query } : {}) },
+    signal,
+    ttl: 5 * MINUTO,
+  });
+
+export const fetchPriceHistory = (
+  { query, searchType, startDate, endDate, farmacias = [] } = {},
+  page = 1,
+  signal,
+) =>
+  getJson("precos/historico", {
+    params: {
+      page,
+      ...(query ? { [searchType]: query } : {}),
+      ...(startDate ? { "data-inicio": startDate } : {}),
+      ...(endDate ? { "data-fim": endDate } : {}),
+      // Aqui `farmacia` combina com a busca — no historico o controller usa
+      // `if` separado, nao `elseif`. E o unico endpoint em que combina.
+      ...(farmacias.length ? { farmacia: farmacias.join(",") } : {}),
+    },
+    signal,
+    ttl: 5 * MINUTO,
+  });
+
+/* -------------------------------------------------------------------------
+   Relatorios
+   ------------------------------------------------------------------------- */
+
+export const fetchReportData = (filters, page = 1, signal) => {
+  const { priceType, startDate, endDate, selectedPharmacies = [] } = filters;
+  const historico = priceType === "historical";
+
+  return getJson(historico ? "precos/historico" : "precos", {
+    params: {
+      page,
+      ...(historico && startDate ? { "data-inicio": startDate } : {}),
+      ...(historico && endDate ? { "data-fim": endDate } : {}),
+      ...(selectedPharmacies.length
+        ? { farmacia: selectedPharmacies.join(",") }
+        : {}),
+    },
+    signal,
+    ttl: 5 * MINUTO,
+  });
+};
+
+export const exportReportData = (filters, formato = "csv", signal) => {
+  const { priceType, startDate, endDate, selectedPharmacies = [] } = filters;
+
+  return getBlob(
+    "report/export",
+    {
+      formato,
+      priceType: priceType === "historical" ? "historical" : "current",
+      ...(startDate ? { "data-inicio": startDate } : {}),
+      ...(endDate ? { "data-fim": endDate } : {}),
+      ...(selectedPharmacies.length
+        ? { farmacia: selectedPharmacies.join(",") }
+        : {}),
+    },
+    { signal },
+  );
+};
+
+/* -------------------------------------------------------------------------
+   Autocomplete
+   ------------------------------------------------------------------------- */
+
+/** Minimo de caracteres antes de chamar /descricoes. Ver comentario abaixo. */
+export const MIN_AUTOCOMPLETE = 3;
+
+/**
+ * Sugestoes de descricao.
+ *
+ * O filtro e opcional no servidor: `/api/descricoes` sem `?descricao=` devolve
+ * as 107 mil descricoes da base — 7,78 MB, medido. Se o autocomplete disparar
+ * na montagem do componente ou com a caixa vazia, e isso que o usuario baixa.
+ * Por isso o piso de caracteres mora aqui, e nao so no componente: qualquer
+ * chamador novo herda a protecao.
+ */
+export const fetchDescriptions = async (query, signal) => {
+  const termo = (query ?? "").trim();
+  if (termo.length < MIN_AUTOCOMPLETE) return [];
+
+  const data = await getJson("descricoes", {
+    params: { descricao: termo },
+    signal,
+    // 24h de cache no servidor depois da 1a chamada; espelhar aqui evita
+    // repetir a ida ao servidor enquanto o usuario apaga e redigita.
+    ttl: 10 * MINUTO,
+  });
+
+  return Array.isArray(data) ? data : [];
+};
+
+/* -------------------------------------------------------------------------
+   Painel
+   ------------------------------------------------------------------------- */
+
+/**
+ * Painel inteiro em uma chamada.
+ *
+ * Substitui as quatro chamadas (statistics + trends + top-changes +
+ * pharmacy-stats) que a tela disparava na montagem. O /summary junta as quatro
+ * do lado do servidor e ainda guarda o resultado em cache por 5 min.
+ */
+export const fetchDashboardSummary = (signal) =>
+  getJson("dashboard/summary", { signal, ttl: 5 * MINUTO });
+
+/* -------------------------------------------------------------------------
+   Autenticacao
+   ------------------------------------------------------------------------- */
+
+export const login = (credentials) => postJson("login", credentials);
+export const register = (payload) => postJson("register", payload);
+export const fetchCurrentUser = (token, signal) =>
+  getJson("user", {
+    signal,
+    headers: { Authorization: `Bearer ${token}` },
+  });

@@ -1,22 +1,31 @@
-import PropTypes from 'prop-types';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { useDashboard } from '../../contexts/DashboardContext';
+import PropTypes from "prop-types";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useDashboard } from "../../contexts/dashboard";
+import { formatDate } from "../../utils/format";
 
 const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-        <p className="font-medium mb-2">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {entry.value} produtos
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-popover p-3 shadow-hover">
+      <p className="mb-2 text-xs text-muted-foreground">{formatDate(label)}</p>
+      {payload.map((entry) => (
+        <p key={entry.name} className="text-sm" style={{ color: entry.color }}>
+          {entry.name}: <span className="tabular font-semibold">{entry.value}</span>
+        </p>
+      ))}
+    </div>
+  );
 };
 
 CustomTooltip.propTypes = {
@@ -28,69 +37,94 @@ CustomTooltip.propTypes = {
 export const TrendsChart = () => {
   const { trends } = useDashboard();
 
-  const chartData = trends.map(({ date, increases, decreases }) => ({
-    day: new Date(date).toLocaleString('pt-BR', { weekday: 'short' }),
+  // O eixo guarda a data ISO e formata na hora de desenhar. O codigo antigo
+  // rotulava so o dia da semana ("seg", "ter"), o que fica ambiguo assim que a
+  // janela passa de sete dias.
+  const chartData = (trends ?? []).map(({ date, increases, decreases }) => ({
     date,
-    increases,
-    decreases
+    increases: Number(increases) || 0,
+    decreases: Number(decreases) || 0,
   }));
 
   return (
-    <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Tendências de Movimento de Preços (última semana)
-        </CardTitle>
+        <CardTitle>Movimento de preços</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-72">
           {chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-muted-foreground">Nenhum dado disponível</p>
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              Nenhum dado no período
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
                 <defs>
-                  <linearGradient id="increasesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--dashboard-danger))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--dashboard-danger))" stopOpacity={0}/>
+                  <linearGradient id="gradAumentos" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="hsl(var(--dashboard-danger))"
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="hsl(var(--dashboard-danger))"
+                      stopOpacity={0}
+                    />
                   </linearGradient>
-                  <linearGradient id="decreasesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--dashboard-success))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--dashboard-success))" stopOpacity={0}/>
+                  <linearGradient id="gradReducoes" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="hsl(var(--dashboard-success))"
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="hsl(var(--dashboard-success))"
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="day" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  vertical={false}
                 />
-                <YAxis 
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => formatDate(v).slice(0, 5)}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                 />
                 <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                />
                 <Area
                   type="monotone"
                   dataKey="increases"
                   stroke="hsl(var(--dashboard-danger))"
-                  fillOpacity={1}
-                  fill="url(#increasesGradient)"
+                  fill="url(#gradAumentos)"
                   strokeWidth={2}
-                  name="Preços Aumentados"
+                  name="Aumentos"
                 />
                 <Area
                   type="monotone"
                   dataKey="decreases"
                   stroke="hsl(var(--dashboard-success))"
-                  fillOpacity={1}
-                  fill="url(#decreasesGradient)"
+                  fill="url(#gradReducoes)"
                   strokeWidth={2}
-                  name="Preços Reduzidos"
+                  name="Reduções"
                 />
               </AreaChart>
             </ResponsiveContainer>

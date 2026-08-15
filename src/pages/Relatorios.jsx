@@ -1,167 +1,140 @@
-import React, { useState } from 'react';
-import ReportFilter from '../components/Reportfilter';
-import ResultsTable from '../components/ResultsTable';
-import PriceHistoryResults from '../components/PriceHistoryResults';
-import Pagination from '../components/Pagination';
-import { fetchReportData, exportReportData } from '../services/Api';
+import { useState } from "react";
+import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import ReportFilter from "../components/Reportfilter";
+import ResultsTable from "../components/ResultsTable";
+import PriceHistoryResults from "../components/PriceHistoryResults";
+import Pagination from "../components/Pagination";
+import PageHeader from "../components/ui/PageHeader";
+import { EmptyState, ErrorState, TableSkeleton } from "../components/ui/feedback";
+import { exportReportData, fetchReportData } from "../services/api";
+import { useApiQuery, useRetry } from "../hooks/useApiQuery";
+
+const baixarBlob = (blob, nomeArquivo) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 
 const Relatorios = () => {
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasFetched, setHasFetched] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [filtros, setFiltros] = useState(null);
+  const [pagina, setPagina] = useState(1);
+  const [exportando, setExportando] = useState(null);
+  const [erroExport, setErroExport] = useState(null);
+  const [nonce, tentarDeNovo] = useRetry();
 
-  const handleGenerateReport = async (newFilters, page = 1) => {
-    setLoading(true);
-    setHasFetched(true);
+  const { data, error, carregando, inativa } = useApiQuery(
+    fetchReportData,
+    filtros ? [filtros, pagina] : null,
+    nonce,
+  );
+
+  const gerar = (novosFiltros) => {
+    setFiltros(novosFiltros);
+    setPagina(1);
+    setErroExport(null);
+  };
+
+  const exportar = async (formato) => {
+    setExportando(formato);
+    setErroExport(null);
     try {
-      const data = await fetchReportData(newFilters, page);
-      if (data.message === "Nenhum resultado encontrado.") {
-        setResults([]);
-      } else {
-        setResults(data.data);
-        setCurrentPage(data.current_page);
-        setTotalPages(data.last_page);
-      }
-      setFilters(newFilters);
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-      setResults([]);
+      const blob = await exportReportData(filtros, formato);
+      baixarBlob(blob, formato === "excel" ? "relatorio.xlsx" : "relatorio.csv");
+    } catch (err) {
+      setErroExport(`Não foi possível exportar: ${err.message}`);
     } finally {
-      setLoading(false);
+      setExportando(null);
     }
   };
 
-  const handlePageChange = (page) => {
-    handleGenerateReport(filters, page);
-  };
+  const linhas = data?.data ?? [];
 
-  const renderResults = () => {
-    // Show loading spinner
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
-        </div>
-      );
-    }
-
-    // Don't show anything before first search
-    if (!hasFetched) {
-      return null;
-    }
-
-    // Show "no results" message after search
-    if (results.length === 0) {
-      return (
-        <div className="flex justify-center items-center h-screen">
-          <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
-        </div>
-      );
-    }
-
-    // Show results
-    return filters.priceType === 'current' ? (
-      <ResultsTable results={results} />
-    ) : (
-      <PriceHistoryResults results={results} />
-    );
-  };
-
-  const renderPagination = () => {
-    // Only show pagination if we have results
-    if (!hasFetched || results.length === 0) {
-      return null;
-    }
-
-    return (
-      <Pagination 
-        currentPage={currentPage} 
-        totalPages={totalPages} 
-        onPageChange={handlePageChange} 
-      />
-    );
-  };
-
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToExcel = async () => {
-    setExporting(true);
-    try {
-      const blob = await exportReportData(filters, 'excel');
-      downloadBlob(blob, 'relatorio.xlsx');
-    } catch (error) {
-      console.error('Erro ao exportar para Excel:', error);
-      alert('Erro ao exportar para Excel. Tente novamente.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const exportToCSV = async () => {
-    setExporting(true);
-    try {
-      const blob = await exportReportData(filters, 'csv');
-      downloadBlob(blob, 'relatorio.csv');
-    } catch (error) {
-      console.error('Erro ao exportar para CSV:', error);
-      alert('Erro ao exportar para CSV. Tente novamente.');
-    } finally {
-      setExporting(false);
-    }
-  };
+  const botaoExport =
+    "inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium transition-smooth hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="relative">
-      {/* Filter Section */}
-      <ReportFilter onGenerateReport={handleGenerateReport} />
-      
-      {/* Export Buttons - Only show when there are results */}
-      {results.length > 0 && !loading && (
-        <div className="flex justify-end mt-4 space-x-4 mr-5">
-          <button 
-            onClick={exportToExcel} 
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            disabled={exporting}
-          >
-            {exporting ? 'Exportando...' : 'Exportar para Excel'}
-          </button>
-          <button 
-            onClick={exportToCSV} 
-            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            disabled={exporting}
-          >
-            {exporting ? 'Exportando...' : 'Exportar para CSV'}
-          </button>
-        </div>
+    <>
+      <PageHeader
+        title="Relatórios"
+        description="Extração por farmácia e período. A exportação é feita pelo servidor — o arquivo já vem pronto."
+        actions={
+          linhas.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => exportar("excel")}
+                disabled={Boolean(exportando)}
+                className={botaoExport}
+              >
+                {exportando === "excel" ? (
+                  <Download className="h-4 w-4 animate-bounce" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4 text-dashboard-success" />
+                )}
+                Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => exportar("csv")}
+                disabled={Boolean(exportando)}
+                className={botaoExport}
+              >
+                {exportando === "csv" ? (
+                  <Download className="h-4 w-4 animate-bounce" />
+                ) : (
+                  <FileText className="h-4 w-4 text-dashboard-warning" />
+                )}
+                CSV
+              </button>
+            </>
+          )
+        }
+      />
+
+      <ReportFilter onGenerateReport={gerar} carregando={carregando} />
+
+      {erroExport && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {erroExport}
+        </p>
       )}
 
-      {/* Loading indicator for exports */}
-      {exporting && (
-        <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-3 flex items-center space-x-2 z-50">
-          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-8 h-8" />
-          <span className="text-sm font-medium">Exportando dados...</span>
-        </div>
+      {inativa && (
+        <EmptyState
+          icon={FileText}
+          title="Configure o relatório"
+          description="Escolha as farmácias e o tipo de preço. Sem farmácia selecionada, o relatório cobre todas."
+        />
       )}
 
-      {/* Results Section */}
-      {renderResults()}
-      
-      {/* Pagination */}
-      {renderPagination()}
-    </div>
+      {carregando && <TableSkeleton />}
+
+      {error && <ErrorState message={error} onRetry={tentarDeNovo} />}
+
+      {data && (
+        <>
+          {filtros.priceType === "current" ? (
+            <ResultsTable results={linhas} />
+          ) : (
+            <PriceHistoryResults results={linhas} />
+          )}
+          <Pagination
+            currentPage={data.current_page ?? pagina}
+            totalPages={data.last_page ?? 1}
+            total={data.total}
+            onPageChange={setPagina}
+          />
+        </>
+      )}
+    </>
   );
 };
 

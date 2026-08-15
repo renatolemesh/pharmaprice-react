@@ -1,121 +1,118 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from "react";
+import PropTypes from "prop-types";
+import { useFarmacias } from "../hooks/useFarmacias";
+import PharmacyPicker from "./PharmacyPicker";
 
-const pharmacies = [
-  { name: "Raia", value: 1 },
-  { name: "Nissei", value: 2 },
-  { name: "Morifarma", value: 3 },
-  { name: "Unipreco", value: 4 },
-  { name: "Callfarma", value: 5 },
-  { name: "Preço Popular", value: 6 },
-  { name: "Panvel", value: 7 },
-  { name: "Pague menos", value: 8 }
-];
-
-const ReportFilter = ({ onGenerateReport }) => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+const ReportFilter = ({ onGenerateReport, carregando }) => {
+  const [priceType, setPriceType] = useState("current");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
-  const [priceType, setPriceType] = useState('current');
-  const [query, setQuery] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showPharmacyDropdown, setShowPharmacyDropdown] = useState(false);
-  const dropdownRef = useRef(null); // Referência para o dropdown
+  const [erro, setErro] = useState("");
+  const { farmacias } = useFarmacias();
 
-  const handlePharmacyChange = (pharmacy) => {
-    setSelectedPharmacies(prevSelected => 
-      prevSelected.includes(pharmacy) ? 
-      prevSelected.filter(p => p !== pharmacy) : 
-      [...prevSelected, pharmacy]
-    );
-  };
+  const historico = priceType === "historical";
 
-  const handleGenerateClick = () => {
-    setErrorMessage('');
-    onGenerateReport({ startDate, endDate, selectedPharmacies, priceType, query });
-  };
-
-  // Função para lidar com cliques fora do dropdown
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setShowPharmacyDropdown(false);
+  const enviar = (e) => {
+    e.preventDefault();
+    if (historico && startDate && endDate && startDate > endDate) {
+      setErro("A data inicial é posterior à data final.");
+      return;
     }
+    setErro("");
+    onGenerateReport({ priceType, startDate, endDate, selectedPharmacies });
   };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const campo =
+    "rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition-smooth focus:border-dashboard-primary focus:ring-2 focus:ring-dashboard-primary/30";
 
   return (
-    <div className="p-4 bg-white shadow rounded-md">
-      <div className="flex space-x-4 mb-4">
-        <div className="relative" ref={dropdownRef}> {/* Adiciona a referência aqui */}
-          <button
-            onClick={() => setShowPharmacyDropdown(!showPharmacyDropdown)}
-            className="px-4 py-2 border rounded-md"
-          >
+    <form
+      onSubmit={enviar}
+      className="mb-6 rounded-card border border-border bg-card p-4 shadow-card"
+    >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <div>
+          <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Farmácias
-          </button>
-          {showPharmacyDropdown && (
-            <div className="absolute mt-2 w-48 bg-white shadow-lg rounded-md z-10">
-              <ul>
-                {pharmacies.map((pharmacy) => (
-                  <li key={pharmacy.value} className="p-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        value={pharmacy.value}
-                        checked={selectedPharmacies.includes(pharmacy.value)}
-                        onChange={() => handlePharmacyChange(pharmacy.value)}
-                        className="form-checkbox h-5 w-5 text-blue-600"
-                      />
-                      <span>{pharmacy.name}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          </span>
+          <PharmacyPicker
+            farmacias={farmacias}
+            selecionadas={selectedPharmacies}
+            onChange={setSelectedPharmacies}
+          />
         </div>
-        <select
-          value={priceType}
-          onChange={(e) => setPriceType(e.target.value)}
-          className="px-4 py-2 border rounded-md"
-          id="priceTypeInput"
-        >
-          <option value="current">Preço Atual</option>
-          <option value="historical">Preço Histórico</option>
-        </select>
-        {priceType === 'historical' && (
+
+        <div>
+          <label
+            htmlFor="tipo-preco"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Tipo
+          </label>
+          <select
+            id="tipo-preco"
+            value={priceType}
+            onChange={(e) => setPriceType(e.target.value)}
+            className={campo}
+          >
+            <option value="current">Preço atual</option>
+            <option value="historical">Histórico de preços</option>
+          </select>
+        </div>
+
+        {historico && (
           <>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-2 border rounded-md"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-2 border rounded-md"
-            />
+            <div>
+              <label
+                htmlFor="relatorio-inicio"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              >
+                De
+              </label>
+              <input
+                id="relatorio-inicio"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={campo}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="relatorio-fim"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              >
+                Até
+              </label>
+              <input
+                id="relatorio-fim"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={campo}
+              />
+            </div>
           </>
         )}
+
         <button
-          onClick={handleGenerateClick}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md ml-2"
+          type="submit"
+          disabled={carregando}
+          className="rounded-lg bg-dashboard-primary px-6 py-2.5 text-sm font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60"
         >
-          Gerar
+          {carregando ? "Gerando..." : "Gerar relatório"}
         </button>
       </div>
-      {errorMessage && (
-        <p className="text-red-500 mt-2">{errorMessage}</p>
-      )}
-    </div>
+
+      {erro && <p className="mt-3 text-sm text-destructive">{erro}</p>}
+    </form>
   );
+};
+
+ReportFilter.propTypes = {
+  onGenerateReport: PropTypes.func.isRequired,
+  carregando: PropTypes.bool,
 };
 
 export default ReportFilter;
