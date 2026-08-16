@@ -44,6 +44,22 @@ export const fetchPrecos = (
     ttl: 5 * MINUTO,
   });
 
+/** Teto por requisição no MercadoController. */
+export const LOTE_MERCADO = 1000;
+
+/**
+ * Preço de mercado de uma lista de códigos de barras.
+ *
+ * Sobe só o EAN. A tabela de preço de quem está comparando nunca sai do
+ * navegador — é dado comercial, e a comparação é uma conta que o cliente faz
+ * sozinho depois de receber o mercado.
+ *
+ * Sem cache do `getJson`: a chave seria a lista inteira de EANs, que muda a
+ * cada arquivo e encheria a memória com respostas que ninguém pede duas vezes.
+ */
+export const fetchMercado = (eans, signal) =>
+  postJson("precos/mercado", { eans }, { signal });
+
 export const fetchPriceHistory = (
   { query, searchType, startDate, endDate, farmacias = [] } = {},
   page = 1,

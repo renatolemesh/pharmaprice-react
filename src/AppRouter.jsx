@@ -17,6 +17,9 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Historico = lazy(() => import("./pages/Historico"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const Produto = lazy(() => import("./pages/Produto"));
+// O comparador carrega planilha inteira em memoria e so serve a quem sobe um
+// arquivo — nao pesa no primeiro carregamento de quem so quer buscar preco.
+const Comparador = lazy(() => import("./pages/Comparador"));
 
 /** Rota que exige sessao. Guarda de onde veio, pra voltar depois do login. */
 const RequireAuth = ({ children }) => {
@@ -74,6 +77,7 @@ const AppRouter = () => (
     <Route path="/" element={<Landing />} />
     <Route path="/precos" element={admin(<Precos />)} />
     <Route path="/produto/:ean" element={admin(<Produto />)} />
+    <Route path="/comparador" element={admin(<Comparador />)} />
     <Route path="/historico" element={admin(<Historico />)} />
     <Route path="/relatorios" element={admin(<Relatorios />)} />
     <Route path="/dashboard" element={admin(<Dashboard />)} />

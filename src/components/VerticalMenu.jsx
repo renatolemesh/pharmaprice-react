@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FileText,
   History,
+  Scale,
   LogOut,
   Menu,
   Moon,
@@ -22,6 +23,7 @@ import { WHATSAPP_SUPORTE } from "../utils/contato";
 const ITENS = [
   { to: "/dashboard", label: "Painel", icon: BarChart3 },
   { to: "/precos", label: "Comparar Preços", icon: Search },
+  { to: "/comparador", label: "Comparar Tabela", icon: Scale },
   { to: "/historico", label: "Histórico de Preços", icon: History },
   { to: "/relatorios", label: "Relatórios", icon: FileText },
 ];
