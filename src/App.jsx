@@ -1,67 +1,50 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, useLocation, useNavigate } from 'react-router-dom';
-import VerticalMenu from './components/VerticalMenu';
-import AppRouter from './AppRouter';
-import { checkAuth } from './services/CheckAuth';
+import { useState } from "react";
+import { useLocation } from "react-router-dom";
+import VerticalMenu from "./components/VerticalMenu";
+import AppRouter from "./AppRouter";
+import { useAuth } from "./contexts/auth";
+
+/* Telas que trazem a própria moldura: a landing tem cabeçalho e rodapé
+   próprios, e as de acesso usam o AuthLayout. Nenhuma delas quer o menu
+   lateral nem o `max-w` do app. */
+const ROTAS_PUBLICAS = ["/", "/login", "/register"];
 
 const App = () => {
-  const [auth, setAuth] = useState(false);
-  const [message, setMessage] = useState('');
-  const [role, setRole] = useState('');
-  const [name, setName] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const { isLoading } = useAuth();
   const location = useLocation();
-  const [authChecked, setAuthChecked] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const authenticate = async () => {
-      const { isAuthenticated, user, message } = await checkAuth();
-      setAuth(isAuthenticated);
-      if (isAuthenticated) {
-        setName(user.name);
-        setRole(user.role);
-      } else {
-        setMessage(message);
-      }
-      setAuthChecked(true);
-    };
+  const mostrarMenu = !ROTAS_PUBLICAS.includes(location.pathname);
 
-    authenticate();
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="gradient-background flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-dashboard-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Verificando sessão...</p>
+        </div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (authChecked && !auth && location.pathname !== '/register' && location.pathname !== '/login') {
-      navigate("/login");
-    }
-    if (authChecked && auth && (location.pathname === '/login' || location.pathname === '/register')) {
-      navigate("/precos");
-    }
-    if (authChecked && auth && role !== 'admin' && (location.pathname !== '/login' || location.pathname !== '/register'))
-       { navigate("/pricing");
-    }
-  }, [authChecked, auth, navigate, location.pathname, role]);
-
-  const handleToggleMenu = (isOpen) => {
-    setIsMenuOpen(isOpen);
-  };
-
-  const shouldShowMenu = !['/login', '/register'].includes(location.pathname);
+  if (!mostrarMenu) {
+    return <AppRouter />;
+  }
 
   return (
-    <div className="flex">
-      {shouldShowMenu && <VerticalMenu onToggleMenu={handleToggleMenu} />}
-      <div className={`flex-grow transition-all duration-300 ${shouldShowMenu ? (isMenuOpen ? 'ml-64' : 'ml-20') : ''}`}>
-        <AppRouter />
+    <div className="gradient-background min-h-screen">
+      <VerticalMenu isOpen={isMenuOpen} onToggleMenu={setIsMenuOpen} />
+      {/* Margem so a partir de `md`: no celular o menu vira gaveta sobreposta,
+          e a margem fixa de 16rem deixava o conteudo espremido fora da tela. */}
+      <div
+        className={`transition-smooth ${isMenuOpen ? "md:ml-64" : "md:ml-20"}`}
+      >
+        <main className="mx-auto w-full max-w-[1600px] px-4 pt-16 pb-10 md:px-6 md:pt-6">
+          <AppRouter />
+        </main>
       </div>
     </div>
   );
 };
 
-const AppWrapper = () => (
-  <Router>
-    <App />
-  </Router>
-);
-
-export default AppWrapper;
+export default App;

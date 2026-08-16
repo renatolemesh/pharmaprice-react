@@ -1,99 +1,106 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { useDashboard } from '../../contexts/DashboardContext';
+import PropTypes from "prop-types";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useDashboard } from "../../contexts/dashboard";
+import { formatNumberToBRL } from "../../utils/format";
+
+const CustomTooltip = ({ active, payload, total }) => {
+  if (!active || !payload?.length) return null;
+  const item = payload[0].payload;
+  const fatia = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0";
+
+  return (
+    <div className="rounded-lg border border-border bg-popover p-3 shadow-hover">
+      <p className="font-medium">{item.name}</p>
+      <p className="tabular text-sm text-muted-foreground">
+        {formatNumberToBRL(item.value)} produtos ({fatia}%)
+      </p>
+    </div>
+  );
+};
+
+CustomTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.arrayOf(PropTypes.object),
+  total: PropTypes.number,
+};
 
 export const DonutChart = () => {
   const { statistics } = useDashboard();
 
   const chartData = [
-    { 
-      name: 'Aumentos', 
-      value: parseInt(statistics.price_increases) || 0, 
-      color: 'hsl(var(--dashboard-danger))' 
+    {
+      name: "Aumentos",
+      value: Number(statistics.price_increases) || 0,
+      color: "hsl(var(--dashboard-danger))",
     },
-    { 
-      name: 'Reduções', 
-      value: parseInt(statistics.price_decreases) || 0, 
-      color: 'hsl(var(--dashboard-success))' 
-    }
+    {
+      name: "Reduções",
+      value: Number(statistics.price_decreases) || 0,
+      color: "hsl(var(--dashboard-success))",
+    },
   ];
 
-  const total = chartData.reduce((sum, item) => sum + item.value, 0);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const item = payload[0].payload;
-      return (
-        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium">{item.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {item.value.toLocaleString()} produtos ({((item.value / total) * 100).toFixed(1)}%)
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  if (total === 0) {
-    return (
-      <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            Produtos com Aumento de Preço vs. Redução de Preço
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80 flex items-center justify-center">
-            <p className="text-muted-foreground">Nenhum dado disponível</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const total = chartData.reduce((soma, item) => soma + item.value, 0);
 
   return (
-    <Card className="bg-gradient-to-br from-card to-card/50 border-0 shadow-card">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Produtos com Aumento de Preço vs. Redução de Preço
-        </CardTitle>
+        <CardTitle>Aumentos x reduções de preço</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={120}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {total === 0 ? (
+          <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+            Nenhum dado no período
+          </div>
+        ) : (
+          <>
+            <div className="relative h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={72}
+                    outerRadius={110}
+                    paddingAngle={3}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {chartData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip total={total} />} />
+                </PieChart>
+              </ResponsiveContainer>
 
-        <div className="mt-6 flex justify-center space-x-8">
-          {chartData.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-sm font-medium">
-                {item.name} ({item.value.toLocaleString()})
-              </span>
+              {/* Total no miolo: o donut sozinho mostra proporcao, nao volume. */}
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="tabular text-2xl font-bold">
+                  {formatNumberToBRL(total)}
+                </span>
+                <span className="text-xs text-muted-foreground">mudanças</span>
+              </div>
             </div>
-          ))}
-        </div>
+
+            <div className="mt-4 flex justify-center gap-6">
+              {chartData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2 text-sm">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-muted-foreground">{item.name}</span>
+                  <span className="tabular font-semibold">
+                    {formatNumberToBRL(item.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

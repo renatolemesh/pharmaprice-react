@@ -1,69 +1,62 @@
-import React, { useState } from 'react';
-import PriceHistoryFilter from '../components/PriceHistoryFilter';
-import PriceHistoryResults from '../components/PriceHistoryResults';
-import { fetchPriceHistory } from '../services/Api';
-import Pagination from '../components/Pagination';
+import { useState } from "react";
+import { History } from "lucide-react";
+import PriceHistoryFilter from "../components/PriceHistoryFilter";
+import PriceHistoryResults from "../components/PriceHistoryResults";
+import Pagination from "../components/Pagination";
+import PageHeader from "../components/ui/PageHeader";
+import { EmptyState, ErrorState, TableSkeleton } from "../components/ui/feedback";
+import { fetchPriceHistory } from "../services/api";
+import { useApiQuery, useRetry } from "../hooks/useApiQuery";
 
 const Historico = () => {
-  const [results, setResults] = useState({ data: [] }); // Inicializa como um objeto com a chave 'data'
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0); 
-  const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({
-    query: '',
-    searchType: '',
-    startDate: '',
-    endDate: '',
-    selectedPharmacy: ''
-  });
-  const [hasSearched, setHasSearched] = useState(false); // Marca se já foi feita a pesquisa
+  const [filtros, setFiltros] = useState(null);
+  const [pagina, setPagina] = useState(1);
+  const [nonce, tentarDeNovo] = useRetry();
 
-  const handleSearch = async (query, searchType, startDate, endDate, selectedPharmacy, page = 1) => {
-    setLoading(true);
-    setHasSearched(true); // Marca que já fez a pesquisa
-    try {
-      const data = await fetchPriceHistory(query, searchType, startDate, endDate, selectedPharmacy, page);
-      setResults(data); // 'data' já tem a chave 'data' com os resultados
-      setCurrentPage(data.current_page);
-      setTotalPages(data.last_page);
-      setFilters({ query, searchType, startDate, endDate, selectedPharmacy });
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, error, carregando, inativa } = useApiQuery(
+    fetchPriceHistory,
+    filtros ? [filtros, pagina] : null,
+    nonce,
+  );
 
-  const handlePageChange = (page) => {
-    handleSearch(filters.query, filters.searchType, filters.startDate, filters.endDate, filters.selectedPharmacy, page);
+  const buscar = (novosFiltros) => {
+    setFiltros(novosFiltros);
+    setPagina(1);
   };
 
   return (
-    <div>
-      <PriceHistoryFilter onSearch={handleSearch} />
-      {loading ? (
-        <div className="flex items-center justify-center h-screen">
-          <img src="/gifs/rolling.svg" alt="Carregando..." className="w-35 h-auto" />
-        </div>
-      ) : (
-        hasSearched && ( // Só exibe a mensagem ou os resultados se já tiver feito a pesquisa
-          results?.data?.length > 0 ? ( // Verifique se a chave 'data' tem itens
-            <>
-              <PriceHistoryResults results={results.data} />
-              <Pagination 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
-                onPageChange={handlePageChange} 
-              />
-            </>
-          ) : (
-            <div className="flex justify-center items-center h-screen">
-              <p className="text-xl text-gray-600">Nenhum resultado encontrado.</p>
-            </div>
-          )
-        )
+    <>
+      <PageHeader
+        title="Histórico de Preços"
+        description="Cada linha é uma mudança de preço — preço estável não gera registro."
+      />
+
+      <PriceHistoryFilter onSearch={buscar} carregando={carregando} />
+
+      {inativa && (
+        <EmptyState
+          icon={History}
+          title="Escolha um filtro para ver o histórico"
+          description="Busque por produto, por farmácia, por período — ou combine os três."
+        />
       )}
-    </div>
+
+      {carregando && <TableSkeleton rows={5} />}
+
+      {error && <ErrorState message={error} onRetry={tentarDeNovo} />}
+
+      {data && (
+        <>
+          <PriceHistoryResults results={data.data ?? []} />
+          <Pagination
+            currentPage={data.current_page ?? pagina}
+            totalPages={data.last_page ?? 1}
+            total={data.total}
+            onPageChange={setPagina}
+          />
+        </>
+      )}
+    </>
   );
 };
 

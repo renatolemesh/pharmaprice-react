@@ -2,12 +2,42 @@
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/cruz_svg.svg" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/cruz_svg.svg" />
+    <!-- A raiz agora é a apresentação, então estas tags são o que aparece no
+         buscador e no card de link compartilhado. -->
+    <meta
+      name="description"
+      content="Compare o preço de medicamentos em 8 redes de farmácia, com histórico de cada mudança de preço desde 2024."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PharmaPrice — o preço de cada farmácia, lado a lado" />
+    <meta
+      property="og:description"
+      content="Compare o preço de medicamentos em 8 redes de farmácia, com histórico de cada mudança de preço desde 2024."
+    />
+    <meta property="og:image" content="/screenshots/comparar.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- A busca leva alguns segundos no servidor; abrir a conexão desde já
+         economiza o DNS + TLS da primeira requisição. -->
+    <link rel="preconnect" href="https://api.pharmaprices.shop" crossorigin />
     <title>PharmaPrice</title>
+    <script>
+      // Aplica o tema antes da primeira pintura. Sem isto a tela pisca branca
+      // por um quadro antes do React montar e ligar a classe `dark`.
+      (function () {
+        try {
+          var salvo = localStorage.getItem("pharmaprice-theme");
+          var escuro =
+            salvo === "dark" ||
+            (!salvo &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (escuro) document.documentElement.classList.add("dark");
+        } catch (e) {
+          /* localStorage bloqueado: segue no tema claro */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

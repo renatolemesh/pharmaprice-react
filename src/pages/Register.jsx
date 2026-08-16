@@ -1,108 +1,123 @@
-import axios from 'axios';
-import { useState } from 'react';
-import { BASE_URL } from '../services/Api';
-import Cookies from 'js-cookie';
-import { Link } from 'react-router-dom';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { register } from "../services/api";
+import { useAuth } from "../contexts/auth";
+import AuthLayout, { campoClasse } from "../components/AuthLayout";
+
+const CAMPOS = [
+  { id: "name", label: "Nome", type: "text", autoComplete: "name" },
+  { id: "email", label: "E-mail", type: "email", autoComplete: "email" },
+  {
+    id: "password",
+    label: "Senha",
+    type: "password",
+    autoComplete: "new-password",
+  },
+  {
+    id: "password_confirmation",
+    label: "Confirmação da senha",
+    type: "password",
+    autoComplete: "new-password",
+  },
+];
 
 const Register = () => {
-    const [values, setValues] = useState({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: ''
-    });
-    const [message, setMessage] = useState('');
+  const [values, setValues] = useState({
+    name: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+  });
+  const [mensagem, setMensagem] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const { signIn } = useAuth();
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        
-        // Verificação de senhas iguais
-        if (values.password !== values.password_confirmation) {
-            setMessage('As senhas não são iguais');
-            return;
-        }
+  const enviar = async (event) => {
+    event.preventDefault();
 
-        try {
-            const res = await axios.post(`${BASE_URL}/register`, values, {
-                withCredentials: false
-            });
-            const dados = res.data;
+    if (values.password !== values.password_confirmation) {
+      setMensagem("As senhas não são iguais.");
+      return;
+    }
+    // O servidor exige 8 caracteres; checar aqui evita uma ida e volta.
+    if (values.password.length < 8) {
+      setMensagem("A senha precisa ter ao menos 8 caracteres.");
+      return;
+    }
 
-            if (dados.message !== 'User registered successfully') {
-                setMessage(dados.message);
-                return;
-            }
+    setEnviando(true);
+    setMensagem("");
 
-            const JWT_token = dados.token;
+    try {
+      const { token } = await register(values);
+      if (!token) throw new Error("Resposta do servidor sem token");
+      await signIn(token);
+    } catch (error) {
+      const detalhes = error?.body?.errors;
+      setMensagem(
+        detalhes
+          ? Object.values(detalhes).flat().join(" ")
+          : error.message || "Não foi possível concluir o cadastro.",
+      );
+    } finally {
+      setEnviando(false);
+    }
+  };
 
-            if (JWT_token) {
-                Cookies.set('token', JWT_token, { expires: 1, secure: true });
-                window.location.reload();
-            }
-        } catch (err) {
-            if (err.response) {
-                console.log(err.response.data);
-                setMessage(err.response.data.message || 'Erro desconhecido');
-            } else {
-                console.log(err);
-                setMessage('Erro desconhecido');
-            }
-        }
-    };
+  return (
+    <AuthLayout title="Criar conta" subtitle="Leva menos de um minuto.">
+      <form onSubmit={enviar} className="space-y-4">
+        {CAMPOS.map(({ id, label, type, autoComplete }) => (
+          <div key={id}>
+            <label
+              htmlFor={id}
+              className="mb-1.5 block text-sm font-medium text-muted-foreground"
+            >
+              {label}
+            </label>
+            <input
+              id={id}
+              type={type}
+              autoComplete={autoComplete}
+              required
+              value={values[id]}
+              onChange={(e) => setValues({ ...values, [id]: e.target.value })}
+              className={campoClasse}
+            />
+          </div>
+        ))}
 
-    return (
-        <div className="bg-gray-900 min-h-screen flex items-center justify-center">
-            <div className="bg-gray-800 p-8 rounded shadow-md w-full max-w-md">
-                <h2 className="text-2xl mb-6 text-center text-white">Registre-se</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-300">Usuário</label>
-                        <input 
-                            type="text" 
-                            placeholder="Seu usuário" 
-                            onChange={e => setValues({...values, name: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full" 
-                        />
-                    </div>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
-                        <input 
-                            type="email" 
-                            placeholder="Seu email" 
-                            onChange={e => setValues({...values, email: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full" 
-                        />
-                    </div>
-                    <div className="mb-4">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-300">Senha</label>
-                        <input 
-                            type="password" 
-                            placeholder="Sua senha" 
-                            onChange={e => setValues({...values, password: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full"
-                        />
-                    </div>
-                    <div className="mb-6">
-                        <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-300">Confirmação da senha</label>
-                        <input 
-                            type="password" 
-                            placeholder="Confirme sua senha" 
-                            onChange={e => setValues({...values, password_confirmation: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full"
-                        />
-                    </div>
-                    <button className="w-full py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-500">
-                        Registrar-se
-                    </button>
-                </form>
-                {message && <p className='text-red-500 mt-5'>{message}</p>}
-                <div className="mt-5 text-center">
-                    <span className="text-gray-300">Já tem cadastro? </span>
-                    <Link to="/login" className="text-blue-500 hover:underline">Login</Link>
-                </div>
-            </div>
-        </div>
-    )
+        <button
+          type="submit"
+          disabled={enviando}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-dashboard-primary py-2.5 font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60"
+        >
+          {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
+          {enviando ? "Registrando..." : "Registrar-se"}
+        </button>
+
+        {mensagem && (
+          <p
+            role="alert"
+            className="rounded-lg bg-destructive/10 px-3 py-2 text-center text-sm text-destructive"
+          >
+            {mensagem}
+          </p>
+        )}
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Já tem cadastro?{" "}
+        <Link
+          to="/login"
+          className="font-medium text-dashboard-primary hover:underline"
+        >
+          Entrar
+        </Link>
+      </p>
+    </AuthLayout>
+  );
 };
 
 export default Register;

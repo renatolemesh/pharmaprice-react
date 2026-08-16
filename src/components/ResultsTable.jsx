@@ -1,273 +1,471 @@
-import { ConstructionIcon, CopyIcon } from 'lucide-react'; 
-import React, { useState, useEffect } from 'react';
+import { useMemo, useState } from "react";
+import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
+import { ArrowDown, ArrowUp, ExternalLink, LineChart } from "lucide-react";
+import { montarUrl } from "../utils/url";
+import { formatCurrency, formatRelativeDay } from "../utils/format";
+import { useIsMobile } from "../hooks/useMediaQuery";
+import { EmptyState } from "./ui/feedback";
+import EanCopiavel from "./ui/EanCopiavel";
 
-const ResponsiveResultsTable = ({ results, selectedPharmacies = [], type }) => {
-  const [sortColumn, setSortColumn] = useState('preco');
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [sortedResults, setSortedResults] = useState([]);
-  const [copyIconColors, setCopyIconColors] = useState({});
-  const [isMobile, setIsMobile] = useState(false);
+const ROTULOS = {
+  nome_farmacia: { label: "Farmácia" },
+  descricao: { label: "Descrição" },
+  EAN: { label: "EAN" },
+  preco: { label: "Preço", align: "right" },
+  ultima_coleta_em: { label: "Atualizado", align: "right" },
+};
 
-  // Check if screen is mobile size
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
+/**
+ * Quem lidera a linha muda com a pergunta que a tela responde.
+ *
+ * Na comparacao voce ja sabe qual e o produto e esta escolhendo onde comprar,
+ * entao a farmacia vem na frente. No relatorio e o contrario: sao todos os
+ * produtos de uma rede, a farmacia se repete linha apos linha e quem distingue
+ * uma linha da outra e o produto.
+ */
+const ORDEM_COLUNAS = {
+  comparacao: ["nome_farmacia", "descricao", "EAN", "preco", "ultima_coleta_em"],
+  catalogo: ["descricao", "nome_farmacia", "EAN", "preco", "ultima_coleta_em"],
+};
 
-  const formatDate = (dateString) => {
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
-  };
+const numero = (valor) => {
+  const n = Number(String(valor ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : Number.NaN;
+};
 
-  const sortResults = (results, column, direction) => {
-    const sorted = [...results].sort((a, b) => {
-      let aValue = a[column];
-      let bValue = b[column];
+/**
+ * Comparador que nunca estoura.
+ *
+ * O comparador antigo chamava `.toLowerCase()` e `.replace()` direto no valor
+ * da celula — uma linha com descricao ou preco nulo derrubava a tabela inteira.
+ * Nulo agora vai sempre pro fim, independente da direcao.
+ */
+const comparar = (a, b, coluna, direcao) => {
+  const sinal = direcao === "asc" ? 1 : -1;
+  let x = a[coluna];
+  let y = b[coluna];
 
-      if (column === 'preco') {
-        aValue = parseFloat(aValue.replace(',', '.'));
-        bValue = parseFloat(bValue.replace(',', '.'));
-      } else if (column === 'data') {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
+  if (x == null && y == null) return 0;
+  if (x == null) return 1;
+  if (y == null) return -1;
+
+  if (coluna === "preco") {
+    x = numero(x);
+    y = numero(y);
+  } else if (coluna === "data" || coluna === "ultima_coleta_em") {
+    x = String(x);
+    y = String(y); // ISO ordena igual como texto
+  } else {
+    x = String(x).toLowerCase();
+    y = String(y).toLowerCase();
+  }
+
+  if (x < y) return -1 * sinal;
+  if (x > y) return 1 * sinal;
+  return 0;
+};
+
+/** Abre a loja em aba nova sem dar acesso ao `window.opener` da nossa página. */
+const abrirLoja = (href) => {
+  if (href) window.open(href, "_blank", "noopener,noreferrer");
+};
+
+const SeloMenorPreco = () => (
+  <span className="rounded-md bg-dashboard-success/15 px-1.5 py-0.5 text-[11px] font-semibold text-dashboard-success">
+    menor
+  </span>
+);
+
+const SeloInativo = () => (
+  <span
+    title="Nenhuma coleta encontrou este produto nos últimos 30 dias"
+    className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground"
+  >
+    inativo
+  </span>
+);
+
+/** Conteudo de cada coluna, separado da ordem em que elas aparecem. */
+const CELULAS = {
+  nome_farmacia: (item) => (
+    <div className="flex items-center gap-2">
+      {item.nome_farmacia}
+      {item.ativo === 0 && <SeloInativo />}
+    </div>
+  ),
+
+  descricao: (item) => (
+    <>
+      <div className="truncate" title={item.descricao}>
+        {item.descricao}
+      </div>
+      {item.laboratorio && (
+        <div className="truncate text-xs font-normal text-muted-foreground">
+          {item.laboratorio}
+        </div>
+      )}
+    </>
+  ),
+
+  EAN: (item) => <EanCopiavel ean={item.EAN} />,
+
+  preco: (item) => (
+    <>
+      <div className="flex items-center justify-end gap-2">
+        {item.ehMenor && <SeloMenorPreco />}
+        <span
+          className={`tabular font-semibold ${
+            item.ehMenor ? "text-dashboard-success" : "text-foreground"
+          }`}
+        >
+          {formatCurrency(item.preco)}
+        </span>
+      </div>
+      {item.acimaEmPercent && (
+        <div className="text-xs font-normal text-muted-foreground">
+          +{item.acimaEmPercent}%
+        </div>
+      )}
+    </>
+  ),
+
+  /*
+   * "Atualizado" mostra `ultima_coleta_em`, nao `data`. `precos` so ganha linha
+   * quando o valor muda, entao `data` responde "quando mudou pela ultima vez" —
+   * um produto com preco estavel ha tres meses parecia desatualizado. Quem
+   * responde "quando foi visto pela ultima vez" e o `ultima_coleta_em`.
+   */
+  ultima_coleta_em: (item) => (
+    <>
+      <div className="text-foreground">
+        {formatRelativeDay(item.ultima_coleta_em ?? item.data)}
+      </div>
+      <div className="text-xs font-normal text-muted-foreground">
+        preço mudou {formatRelativeDay(item.data)}
+      </div>
+    </>
+  ),
+};
+
+const ResultsTable = ({ results = [], variante = "comparacao" }) => {
+  const [sortColumn, setSortColumn] = useState("preco");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const isMobile = useIsMobile();
+
+  const colunas = ORDEM_COLUNAS[variante] ?? ORDEM_COLUNAS.comparacao;
+  const principal = colunas[0];
+
+  /**
+   * Menor preco por produto — nao por pagina.
+   *
+   * Uma busca por descricao devolve varios produtos diferentes de uma vez;
+   * marcar "menor preco" olhando so a primeira linha da pagina compararia
+   * Dipirona com Dorflex. O agrupamento e por `produto_id`, que e o que torna
+   * duas linhas de redes diferentes o mesmo item.
+   */
+  const menorPorProduto = useMemo(() => {
+    const mapa = new Map();
+    for (const item of results) {
+      const preco = numero(item.preco);
+      if (!Number.isFinite(preco)) continue;
+      const atual = mapa.get(item.produto_id);
+      if (atual === undefined) {
+        mapa.set(item.produto_id, { menor: preco, linhas: 1 });
       } else {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+        atual.linhas += 1;
+        if (preco < atual.menor) atual.menor = preco;
       }
+    }
+    return mapa;
+  }, [results]);
 
-      return direction === 'asc' ? (aValue > bValue ? 1 : -1) : (aValue < bValue ? 1 : -1);
+  const linhas = useMemo(() => {
+    const ordenado = [...results].sort((a, b) =>
+      comparar(a, b, sortColumn, sortDirection),
+    );
+
+    return ordenado.map((item) => {
+      const preco = numero(item.preco);
+      const grupo = menorPorProduto.get(item.produto_id);
+
+      // Com uma farmacia so, "menor preco" nao compara com nada — o selo viraria
+      // enfeite em toda linha de produto exclusivo de uma rede.
+      const comparavel =
+        grupo?.linhas > 1 && grupo.menor > 0 && Number.isFinite(preco);
+
+      return {
+        ...item,
+        href: montarUrl(item),
+        ehMenor: comparavel && preco === grupo.menor,
+        acimaEmPercent:
+          comparavel && preco > grupo.menor
+            ? ((preco / grupo.menor - 1) * 100).toFixed(0)
+            : null,
+      };
     });
+  }, [results, sortColumn, sortDirection, menorPorProduto]);
 
-    return sorted;
-  };
-
-  useEffect(() => {
-    setSortedResults(sortResults(results, sortColumn, sortDirection));
-  }, [results, sortColumn, sortDirection]);
-
-  const handleSort = (column) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  const ordenarPor = (coluna) => {
+    if (sortColumn === coluna) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setSortColumn(column);
-      setSortDirection('asc');
+      setSortColumn(coluna);
+      setSortDirection(coluna === "preco" ? "asc" : "asc");
     }
   };
 
-  const farmaciaIdMap = {
-    'Raia': 1,
-    'Nissei': 2,
-    'Morifarma': 3,
-    'Unipreco': 4,
-    'Callfarma': 5,
-    'PP': 6,
-    'Panvel': 7,
-    'Pague menos': 8,
-  };
+  if (results.length === 0) {
+    return (
+      <EmptyState description="Tente outra descrição ou informe o código de barras do produto." />
+    );
+  }
 
-  const getCompleteUrl = (farmaciaNome, link) => {
-    const farmaciaId = farmaciaIdMap[farmaciaNome];
-    const baseUrls = {
-      1: 'https://www.drogaraia.com.br',
-      2: 'https://www.farmaciasnissei.com.br',
-      3: 'https://www.morifarma.com.br',
-      4: 'https://www.farmaciasunipreco.com.br',
-      5: 'https://www.callfarma.com.br',
-      6: 'https://www.precopopular.com.br',
-      7: 'https://www.panvel.com/panvel',
-      8: 'https://www.paguemenos.com.br',
-    };
+  const Seta = sortDirection === "asc" ? ArrowUp : ArrowDown;
 
-    const baseUrl = baseUrls[farmaciaId];
-    if (!baseUrl) {
-      console.error(`Base URL not found for farmaciaNome: ${farmaciaNome}`);
-      return '#';
-    }
-
-    const sanitizedLink = link.replace(/^\/+/, '');
-    if (farmaciaId === 6) {
-      return `${baseUrl}/${sanitizedLink}/p`;
-    }
-
-    if (sanitizedLink.startsWith('https://www.farmaciasapp.com.br')) {
-      return sanitizedLink;
-    }
-    
-    return `${baseUrl}/${sanitizedLink}`;
-  };
-
-  const copyToClipboard = (ean) => {
-    navigator.clipboard.writeText(ean);
-    setCopyIconColors((prev) => ({ ...prev, [ean]: 'text-green-500' }));
-
-    setTimeout(() => {
-      setCopyIconColors((prev) => ({ ...prev, [ean]: 'text-gray-500' }));
-    }, 500);
-  };
-
-  const handleRowClick = (result) => {
-    window.open(getCompleteUrl(result.nome_farmacia, result.link), '_blank');
-  };
-
-  // Mobile Card Layout
-  const MobileCard = ({ result, index }) => (
-    <div 
-      key={index} 
-      className="bg-white border border-gray-300 rounded-lg p-4 mb-3 shadow-sm cursor-pointer hover:bg-gray-50 active:bg-gray-100"
-      onClick={() => handleRowClick(result)}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-semibold text-lg text-blue-600">{result.nome_farmacia}</h3>
-        <span className="text-lg font-bold text-green-600">R$ {result.preco}</span>
-      </div>
-      
-      <p className="text-gray-700 text-sm mb-2 line-clamp-2">{result.descricao}</p>
-      
-      <div className="flex justify-between items-center text-sm text-gray-500">
-        <div className="flex items-center">
-          <span className="mr-2">EAN: {result.EAN}</span>
-          <CopyIcon
-            className={`w-4 h-4 cursor-pointer ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              copyToClipboard(result.EAN);
-            }}
-          />
-        </div>
-        <span>{formatDate(result.data)}</span>
-      </div>
-    </div>
-  );
-
-  // Desktop Table Layout
-  const DesktopTable = () => (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse border border-gray-300 min-w-[800px]">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="border border-gray-300 px-3 py-2 cursor-pointer text-left text-sm font-medium" onClick={() => handleSort('nome_farmacia')}>
-              FARMÁCIA
-              {sortColumn === 'nome_farmacia' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-              )}
-            </th>
-            <th className="border border-gray-300 px-3 py-2 cursor-pointer text-left text-sm font-medium" onClick={() => handleSort('descricao')}>
-              DESCRIÇÃO
-              {sortColumn === 'descricao' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-              )}
-            </th>
-            <th className="border border-gray-300 px-3 py-2 cursor-pointer text-left text-sm font-medium" onClick={() => handleSort('EAN')}>
-              EAN
-              {sortColumn === 'EAN' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-              )}
-            </th>
-            <th className="border border-gray-300 px-3 py-2 cursor-pointer text-left text-sm font-medium" onClick={() => handleSort('preco')}>
-              PREÇO
-              {sortColumn === 'preco' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-              )}
-            </th>
-            <th className="border border-gray-300 px-3 py-2 cursor-pointer text-left text-sm font-medium" onClick={() => handleSort('data')}>
-              DATA
-              {sortColumn === 'data' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-              )}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedResults.map((result, index) => (
-            <tr 
-              key={index} 
-              className="cursor-pointer hover:bg-gray-100 active:bg-gray-200" 
-              onClick={() => handleRowClick(result)}
-            >
-              <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{result.nome_farmacia}</td>
-              <td className="border border-gray-300 px-3 py-2 text-sm max-w-xs">
-                <div className="truncate" title={result.descricao}>
-                  {result.descricao}
-                </div>
-              </td>
-              <td className="border border-gray-300 px-3 py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="mr-2">{result.EAN}</span>
-                  <CopyIcon
-                    className={`w-4 h-4 cursor-pointer flex-shrink-0 ${copyIconColors[result.EAN] || 'text-gray-500'}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyToClipboard(result.EAN);
-                    }}
-                  />
-                </div>
-              </td>
-              <td className="border border-gray-300 px-3 py-2 text-sm font-semibold text-green-600">R$ {result.preco}</td>
-              <td className="border border-gray-300 px-3 py-2 text-sm">{formatDate(result.data)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  return (
-    <div className="p-2 sm:p-4">
-      {/* Sort controls for mobile */}
-      {isMobile && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ordenar por:
+  /* --------------------------------- Mobile -------------------------------- */
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <label htmlFor="ordenar" className="text-sm text-muted-foreground">
+            Ordenar:
           </label>
-          <div className="flex flex-wrap gap-2">
-            <select 
-              value={sortColumn} 
-              onChange={(e) => setSortColumn(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm"
-            >
-              <option value="preco">Preço</option>
-              <option value="nome_farmacia">Farmácia</option>
-              <option value="descricao">Descrição</option>
-              <option value="EAN">EAN</option>
-              <option value="data">Data</option>
-            </select>
-            <button
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-            >
-              {sortDirection === 'asc' ? '↑ Crescente' : '↓ Decrescente'}
-            </button>
-          </div>
+          <select
+            id="ordenar"
+            value={sortColumn}
+            onChange={(e) => setSortColumn(e.target.value)}
+            className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm"
+          >
+            {colunas.map((key) => (
+              <option key={key} value={key}>
+                {ROTULOS[key].label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))}
+            className="rounded-lg border border-border bg-card p-2"
+            aria-label="Inverter ordem"
+          >
+            <Seta className="h-4 w-4" />
+          </button>
         </div>
-      )}
 
-      {/* Conditional rendering based on screen size */}
-      {isMobile ? (
-        <div className="space-y-3">
-          {sortedResults.map((result, index) => (
-            <MobileCard key={index} result={result} index={index} />
-          ))}
-        </div>
-      ) : (
-        <DesktopTable />
-      )}
+        {linhas.map((item) => (
+          <LinhaCartao
+            key={`${item.produto_id}-${item.nome_farmacia}`}
+            item={item}
+            catalogo={variante === "catalogo"}
+          />
+        ))}
+      </div>
+    );
+  }
 
-      {/* Empty state */}
-      {sortedResults.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <ConstructionIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p>Nenhum resultado encontrado</p>
-        </div>
-      )}
+  /* -------------------------------- Desktop -------------------------------- */
+  return (
+    <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[860px] text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              {colunas.map((key) => {
+                const { label, align } = ROTULOS[key];
+                return (
+                <th
+                  key={key}
+                  scope="col"
+                  aria-sort={
+                    sortColumn === key
+                      ? sortDirection === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground ${
+                    align === "right" ? "text-right" : "text-left"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => ordenarPor(key)}
+                    className={`inline-flex items-center gap-1 transition-smooth hover:text-foreground ${
+                      align === "right" ? "flex-row-reverse" : ""
+                    }`}
+                  >
+                    {label}
+                    {sortColumn === key && <Seta className="h-3 w-3" />}
+                  </button>
+                </th>
+                );
+              })}
+              <th scope="col" className="w-10 px-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((item) => (
+              <tr
+                key={`${item.produto_id}-${item.nome_farmacia}`}
+                onClick={() => abrirLoja(item.href)}
+                className={`group border-b border-border/60 transition-smooth last:border-b-0 hover:bg-muted/40 ${
+                  item.ativo === 0 ? "opacity-60" : ""
+                } ${item.href ? "cursor-pointer" : ""}`}
+              >
+                {colunas.map((key) => (
+                  <td
+                    key={key}
+                    className={`px-4 py-3 ${
+                      ROTULOS[key].align === "right" ? "text-right" : ""
+                    } ${key === "descricao" ? "max-w-md" : ""} ${
+                      key === principal ? "font-medium" : ""
+                    }`}
+                  >
+                    {CELULAS[key](item)}
+                  </td>
+                ))}
+
+                <td className="px-2 py-3 text-right">
+                  {/* A linha inteira abre a loja; este atalho vai pra página do
+                      produto. Duas ações diferentes, dois alvos distintos. */}
+                  <Link
+                    to={`/produto/${item.EAN}`}
+                    onClick={(e) => e.stopPropagation()}
+                    title="Ver produto e histórico"
+                    aria-label={`Ver detalhes de ${item.descricao}`}
+                    className="mr-1 inline-flex rounded-lg p-2 text-muted-foreground opacity-0 transition-smooth hover:bg-muted hover:text-dashboard-primary focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <LineChart className="h-4 w-4" />
+                  </Link>
+                  {item.href ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      // A linha inteira já abre a loja; sem isto o clique no
+                      // ícone contaria duas vezes e abriria duas abas.
+                      onClick={(e) => e.stopPropagation()}
+                      title="Abrir na loja"
+                      aria-label={`Abrir ${item.descricao} em ${item.nome_farmacia}`}
+                      className="inline-flex rounded-lg p-2 text-muted-foreground opacity-0 transition-smooth hover:bg-muted hover:text-dashboard-primary focus-visible:opacity-100 group-hover:opacity-100"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <span
+                      title="Sem link cadastrado para esta farmácia"
+                      className="inline-flex p-2 text-muted-foreground/30"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
-export default ResponsiveResultsTable;
+const LinhaCartao = ({ item, catalogo }) => (
+  <article
+    onClick={() => abrirLoja(item.href)}
+    className={`rounded-card border border-border bg-card p-4 shadow-card ${
+      item.ehMenor ? "ring-1 ring-dashboard-success/40" : ""
+    } ${item.ativo === 0 ? "opacity-60" : ""} ${
+      item.href ? "cursor-pointer active:bg-muted/50" : ""
+    }`}
+  >
+    {/* No relatorio o produto lidera e a farmacia vira etiqueta; na comparacao
+        e o contrario, porque a descricao ali se repete a cada linha. */}
+    <div className="mb-2 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        {catalogo ? (
+          <>
+            <p className="line-clamp-2 text-sm font-semibold text-foreground">
+              {item.descricao}
+            </p>
+            <span className="mt-1 inline-block rounded-md bg-dashboard-primary/10 px-2 py-0.5 text-xs font-medium text-dashboard-primary">
+              {item.nome_farmacia}
+            </span>
+          </>
+        ) : (
+          <span className="font-semibold text-dashboard-primary">
+            {item.nome_farmacia}
+          </span>
+        )}
+        {item.ativo === 0 && (
+          <span className="ml-1.5 inline-block">
+            <SeloInativo />
+          </span>
+        )}
+      </div>
 
+      <div className="shrink-0 text-right">
+        <div className="flex items-center gap-1.5">
+          {item.ehMenor && <SeloMenorPreco />}
+          <span
+            className={`tabular text-lg font-bold ${
+              item.ehMenor ? "text-dashboard-success" : "text-foreground"
+            }`}
+          >
+            {formatCurrency(item.preco)}
+          </span>
+        </div>
+        {item.acimaEmPercent && (
+          <span className="text-xs text-muted-foreground">
+            +{item.acimaEmPercent}% vs. menor
+          </span>
+        )}
+      </div>
+    </div>
+
+    {!catalogo && (
+      <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+        {item.descricao}
+      </p>
+    )}
+
+    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+      <EanCopiavel ean={item.EAN} />
+      <span>{formatRelativeDay(item.ultima_coleta_em ?? item.data)}</span>
+    </div>
+
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <Link
+        to={`/produto/${item.EAN}`}
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium transition-smooth active:bg-muted"
+      >
+        Ver produto
+      </Link>
+      {item.href && (
+        <a
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-dashboard-primary transition-smooth active:bg-muted"
+        >
+          Abrir loja <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </div>
+  </article>
+);
+
+LinhaCartao.propTypes = {
+  item: PropTypes.object.isRequired,
+  catalogo: PropTypes.bool,
+};
+
+ResultsTable.propTypes = {
+  results: PropTypes.arrayOf(PropTypes.object),
+  /** "comparacao": farmácia lidera · "catalogo": produto lidera (relatórios) */
+  variante: PropTypes.oneOf(["comparacao", "catalogo"]),
+};
+
+export default ResultsTable;

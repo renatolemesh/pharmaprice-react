@@ -1,83 +1,125 @@
-import axios from 'axios';
-import { useState } from 'react';
-import { BASE_URL } from '../services/Api';
-import Cookies from 'js-cookie';
-import { Link } from 'react-router-dom';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { login } from "../services/api";
+import { useAuth } from "../contexts/auth";
+import AuthLayout, { campoClasse } from "../components/AuthLayout";
 
 const Login = () => {
-    const [values, setValues] = useState({
-        email: '',
-        password: ''
-    });
+  const [values, setValues] = useState({ email: "", password: "" });
+  const [mensagem, setMensagem] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [verSenha, setVerSenha] = useState(false);
+  const { signIn } = useAuth();
 
-    const [message, setMessage] = useState('');
+  const enviar = async (event) => {
+    event.preventDefault();
+    setEnviando(true);
+    setMensagem("");
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        try {
-            const res = await axios.post(`${BASE_URL}/login`, values, {
-                withCredentials: false
-            });
-            const dados = res.data;
+    try {
+      const { token } = await login(values);
+      if (!token) throw new Error("Resposta do servidor sem token");
+      // Sem `window.location.reload()`: o provider troca o estado no lugar e o
+      // roteador já redireciona pra tela certa conforme o papel do usuário.
+      await signIn(token);
+    } catch (error) {
+      setMensagem(
+        error?.status === 401
+          ? "E-mail ou senha incorretos."
+          : error.message || "Não foi possível entrar.",
+      );
+    } finally {
+      setEnviando(false);
+    }
+  };
 
-            if (dados.message === "The provided credentials are incorrect.") {
-                setMessage('Credenciais inválidas');
-                return;
-            }
-
-            const JWT_token = dados.token;
-
-            if (JWT_token) {
-                Cookies.set('token', JWT_token, { expires: 1, secure: true });
-                window.location.reload();
-            }
-        } catch (err) {
-            if (err.response) {
-                console.log(err.response.data);
-                setMessage(err.response.data.message || 'Erro desconhecido');
-            } else {
-                console.log(err);
-                setMessage('Erro desconhecido');
-            }
-        }
-    };
-
-    return (
-        <div className="bg-gray-900 min-h-screen flex items-center justify-center">
-            <div className="bg-gray-800 p-8 rounded shadow-md w-full max-w-md">
-                <h2 className="text-2xl mb-6 text-center text-white">Login</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
-                        <input 
-                            type="email" 
-                            placeholder="Seu email" 
-                            onChange={e => setValues({...values, email: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full"
-                        />
-                    </div>
-                    <div className="mb-6">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-300">Senha</label>
-                        <input 
-                            type="password" 
-                            placeholder="Sua senha" 
-                            onChange={e => setValues({...values, password: e.target.value})}
-                            className="mt-1 px-3 py-2 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-500 focus:ring-opacity-50 w-full"
-                        />
-                    </div>
-                    
-                    <button 
-                        type="submit"
-                        className="w-full py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-500"
-                    >
-                        Login
-                    </button>
-                    <div className="mt-5 text-center"> <span className="text-gray-300">Não tem cadastro? </span> <Link to="/register" className="text-blue-500 hover:underline">Registre-se</Link> </div>
-                </form>
-                {message && <p className="mt-4 text-red-500 text-center">{message}</p>}
-            </div>
+  return (
+    <AuthLayout
+      title="Entrar"
+      subtitle="Acompanhe preços das farmácias em um só lugar."
+    >
+      <form onSubmit={enviar} className="space-y-4">
+        <div>
+          <label
+            htmlFor="email"
+            className="mb-1.5 block text-sm font-medium text-muted-foreground"
+          >
+            E-mail
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={values.email}
+            onChange={(e) => setValues({ ...values, email: e.target.value })}
+            className={campoClasse}
+          />
         </div>
-    );
+
+        <div>
+          <label
+            htmlFor="password"
+            className="mb-1.5 block text-sm font-medium text-muted-foreground"
+          >
+            Senha
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={verSenha ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              value={values.password}
+              onChange={(e) => setValues({ ...values, password: e.target.value })}
+              className={`${campoClasse} pr-11`}
+            />
+            <button
+              type="button"
+              onClick={() => setVerSenha((v) => !v)}
+              aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-smooth hover:text-foreground"
+            >
+              {verSenha ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={enviando}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-dashboard-primary py-2.5 font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60"
+        >
+          {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
+          {enviando ? "Entrando..." : "Entrar"}
+        </button>
+
+        {mensagem && (
+          <p
+            role="alert"
+            className="rounded-lg bg-destructive/10 px-3 py-2 text-center text-sm text-destructive"
+          >
+            {mensagem}
+          </p>
+        )}
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Não tem cadastro?{" "}
+        <Link
+          to="/register"
+          className="font-medium text-dashboard-primary hover:underline"
+        >
+          Registre-se
+        </Link>
+      </p>
+    </AuthLayout>
+  );
 };
 
 export default Login;

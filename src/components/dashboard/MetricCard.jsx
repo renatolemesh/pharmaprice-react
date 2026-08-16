@@ -1,64 +1,75 @@
-import PropTypes from 'prop-types';
-import { Card } from '../../components/ui/card';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import PropTypes from "prop-types";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { Card } from "../ui/card";
+
+/**
+ * `change` pode vir null (metrica sem comparativo, tipo "total de produtos") ou
+ * como string vinda do JSON. Normalizar aqui evita o `+null%` que aparecia no
+ * cartao de total.
+ */
+const normalizar = (valor) => {
+  if (valor === null || valor === undefined || valor === "") return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
+};
 
 export const MetricCard = ({
-  title = 'Metric',
-  value = '0',
-  change = 0,
-  changeType = 'neutral',
+  title,
+  value,
+  change = null,
+  /** true quando subir é ruim (preço, tempo de resposta). */
+  inverso = false,
   icon = null,
-  trend = 'neutral',
-  showPercentage = true,
+  suffix = "",
 }) => {
-  const getTrendColor = () => {
-    switch (changeType) {
-      case 'increase': return 'text-dashboard-success';
-      case 'decrease': return 'text-dashboard-danger';
-      default: return 'text-muted-foreground';
-    }
-  };
+  const delta = normalizar(change);
+  const subiu = delta !== null && delta > 0;
+  const caiu = delta !== null && delta < 0;
+  const ruim = inverso ? subiu : caiu;
 
-  const getTrendIcon = () => {
-    if (trend === 'up') return <TrendingUp className="w-4 h-4" />;
-    if (trend === 'down') return <TrendingDown className="w-4 h-4" />;
-    return null;
-  };
+  const Icone = subiu ? TrendingUp : caiu ? TrendingDown : Minus;
+  const cor =
+    delta === null || delta === 0
+      ? "text-muted-foreground"
+      : ruim
+        ? "text-dashboard-danger"
+        : "text-dashboard-success";
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-card to-card/50 border-0 shadow-card hover:shadow-metric transition-all duration-300 hover:-translate-y-1">
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-dashboard-primary/10 to-dashboard-primary/5">
-          {icon}
-        </div>
-        {change !== undefined && (
-          <div className={`flex items-center space-x-1 ${getTrendColor()}`}>
-            {getTrendIcon()}
-            <span className="text-sm font-medium">
-              {change > 0 ? '+' : ''}{change}{showPercentage ? '%' : ''}
-            </span>
-          </div>
+    <Card className="p-5 transition-smooth hover:-translate-y-0.5 hover:shadow-hover">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="rounded-xl bg-dashboard-primary/10 p-2.5">{icon}</div>
+        {delta !== null && (
+          <span
+            className={`flex items-center gap-1 rounded-full bg-muted/60 px-2 py-1 text-xs font-semibold ${cor}`}
+          >
+            <Icone className="h-3.5 w-3.5" />
+            {delta > 0 ? "+" : ""}
+            {delta}%
+          </span>
         )}
       </div>
-      
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          {title}
-        </h3>
-        <p className="text-3xl font-bold bg-gradient-to-r from-dashboard-primary to-dashboard-secondary bg-clip-text text-transparent">
-          {value}
-        </p>
-      </div>
+
+      <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h3>
+      <p className="tabular mt-1.5 text-2xl font-bold text-foreground">
+        {value}
+        {suffix && (
+          <span className="ml-1 text-base font-medium text-muted-foreground">
+            {suffix}
+          </span>
+        )}
+      </p>
     </Card>
   );
 };
 
 MetricCard.propTypes = {
-  title: PropTypes.string,
-  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  change: PropTypes.number,
-  changeType: PropTypes.oneOf(['increase', 'decrease', 'neutral']),
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  change: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  inverso: PropTypes.bool,
   icon: PropTypes.node,
-  trend: PropTypes.oneOf(['up', 'down', 'neutral']),
-  showPercentage: PropTypes.bool,
+  suffix: PropTypes.string,
 };

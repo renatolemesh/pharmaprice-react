@@ -1,80 +1,149 @@
-import React, { useState } from 'react';
+import { useState } from "react";
+import PropTypes from "prop-types";
+import { Search } from "lucide-react";
+import { useFarmacias } from "../hooks/useFarmacias";
+import PharmacyPicker from "./PharmacyPicker";
 
-const PriceHistoryFilter = ({ onSearch }) => {
-  const [query, setQuery] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedPharmacy, setSelectedPharmacy] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+const ehEan = (valor) => /^\d{5,15}$/.test(valor.trim());
 
-  const handleSearch = () => {
-    if (!query && !startDate && !endDate && !selectedPharmacy) {
-      setErrorMessage('Preencha pelo menos um filtro para realizar a pesquisa.');
+const PriceHistoryFilter = ({ onSearch, carregando }) => {
+  const [query, setQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [farmacias, setFarmacias] = useState([]);
+  const [erro, setErro] = useState("");
+  const { farmacias: lista } = useFarmacias();
+
+  const enviar = (e) => {
+    e.preventDefault();
+
+    if (!query && !startDate && !endDate && farmacias.length === 0) {
+      setErro("Preencha ao menos um filtro para pesquisar.");
+      return;
+    }
+    if (startDate && endDate && startDate > endDate) {
+      setErro("A data inicial é posterior à data final.");
       return;
     }
 
-    setErrorMessage('');
-
-    const isEan = /^\d{5,15}$/.test(query);
-
-    onSearch(query, isEan ? 'ean' : 'descricao', startDate, endDate, selectedPharmacy);
+    setErro("");
+    onSearch({
+      query,
+      searchType: ehEan(query) ? "ean" : "descricao",
+      startDate,
+      endDate,
+      farmacias,
+    });
   };
 
+  const campo =
+    "rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition-smooth focus:border-dashboard-primary focus:ring-2 focus:ring-dashboard-primary/30";
+
   return (
-    <div className="flex flex-col p-4 space-y-4">
-      <div className="flex">
-        <input
-          type="text"
-          placeholder="Pesquisar por EAN ou Descrição..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-grow px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
+    <form
+      onSubmit={enviar}
+      className="mb-6 rounded-card border border-border bg-card p-4 shadow-card"
+    >
+      {/*
+        No celular vira grade de duas colunas: empilhar os quatro campos em
+        largura total empurrava o resultado pra fora da primeira tela inteira.
+        As duas datas dividem uma linha, que e como elas sao lidas mesmo.
+      */}
+      <div className="grid grid-cols-2 gap-3 lg:flex lg:items-end">
+        <div className="col-span-2 lg:flex-1">
+          <label
+            htmlFor="historico-busca"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Produto
+          </label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              id="historico-busca"
+              type="text"
+              placeholder="Descrição ou código de barras"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className={`${campo} w-full pl-9`}
+            />
+          </div>
+        </div>
+
+        <div className="col-span-2">
+          <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Farmácias
+          </span>
+          <PharmacyPicker
+            farmacias={lista}
+            selecionadas={farmacias}
+            onChange={setFarmacias}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="historico-inicio"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            De
+          </label>
+          <input
+            id="historico-inicio"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className={`${campo} w-full`}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="historico-fim"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Até
+          </label>
+          <input
+            id="historico-fim"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className={`${campo} w-full`}
+          />
+        </div>
+
         <button
-          onClick={handleSearch}
-          className="px-4 py-2 bg-blue-600 text-white rounded-r-md focus:outline-none"
+          type="submit"
+          disabled={carregando}
+          className="col-span-2 rounded-lg bg-dashboard-primary px-6 py-2.5 text-sm font-medium text-white transition-smooth hover:brightness-110 disabled:opacity-60 lg:col-span-1"
         >
-          Pesquisar
+          {carregando ? "Buscando..." : "Pesquisar"}
         </button>
       </div>
-      <div className="flex space-x-4">
-        <select
-          value={selectedPharmacy}
-          onChange={(e) => setSelectedPharmacy(e.target.value)}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        >
-          <option value="">Selecione a Farmácia</option>
-          <option value="1">Raia</option>
-          <option value="2">Nissei</option>
-          <option value="3">Morifarma</option>
-          <option value="4">Unipreco</option>
-          <option value="5">Callfarma</option>
-          <option value="6">Preço Popular</option>
-          <option value="7">Panvel</option>
-          <option value="8">Pague menos</option>
-        </select>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-        />
-      </div>
-      {errorMessage && (
-        <p className="text-red-500 mt-2">{errorMessage}</p>
+
+      {erro && <p className="mt-3 text-sm text-destructive">{erro}</p>}
+
+      {/*
+        A paginacao do /precos/historico acontece antes do agrupamento: o
+        controller pagina 100 linhas cruas e so depois junta por produto. Uma
+        pagina pode vir com bem menos de 100 grupos, e o historico de um mesmo
+        produto pode aparecer partido entre duas paginas. Buscar por EAN e o
+        que mantem a serie inteira junta.
+      */}
+      {query && !ehEan(query) && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Dica: buscando pelo código de barras, a série de preços de um produto
+          não fica dividida entre páginas.
+        </p>
       )}
-    </div>
+    </form>
   );
 };
 
+PriceHistoryFilter.propTypes = {
+  onSearch: PropTypes.func.isRequired,
+  carregando: PropTypes.bool,
+};
+
 export default PriceHistoryFilter;
-
-
-
-

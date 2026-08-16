@@ -1,17 +1,17 @@
-import { useEffect } from 'react';
-import Cookies from 'js-cookie';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/auth";
 
-const Logout = () => { 
-    const navigate = useNavigate();
+const Logout = () => {
+  const { isAuthenticated, signOut } = useAuth();
 
-    useEffect(() => {
-        Cookies.remove('token');
-        navigate('/login');
-        window.location.reload(); // Força o recarregamento para atualizar o estado de autenticação
-    }, [navigate]);
+  useEffect(() => {
+    if (isAuthenticated) signOut();
+  }, [isAuthenticated, signOut]);
 
-    return null; // Retorna null, já que não precisa renderizar nada
+  // Antes isto era `navigate('/login')` seguido de `window.location.reload()`,
+  // que descartava o bundle já carregado só pra o app reler o cookie.
+  return isAuthenticated ? null : <Navigate to="/login" replace />;
 };
 
 export default Logout;
