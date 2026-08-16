@@ -7,8 +7,11 @@ import {
   ExternalLink,
   History,
   LineChart,
+  Lock,
   Search,
   Smartphone,
+  Sparkles,
+  TriangleAlert,
 } from "lucide-react";
 import { useAuth } from "../contexts/auth";
 import { corDaFarmacia } from "../utils/paletaFarmacias";
@@ -26,17 +29,22 @@ import {
  * mas os que valem a pena mostrar vêm de /dashboard/summary, que leva ~25s numa
  * chamada com cache frio: a tela de apresentação passaria meio minuto vazia
  * justamente para quem nunca viu o produto. Os números abaixo foram medidos
- * direto na base em 15/08/2026 e envelhecem devagar (o volume só cresce), então
+ * direto na base em 16/08/2026 e envelhecem devagar (o volume só cresce), então
  * o custo de deixá-los fixos é um número desatualizado para baixo, não uma
  * promessa falsa. Ao atualizar, rode:
  *
- *   SELECT (SELECT COUNT(*) FROM precos), (SELECT COUNT(*) FROM produtos),
+ *   SELECT (SELECT COUNT(*) FROM precos),
+ *          (SELECT COUNT(DISTINCT produto_id) FROM precos_atuais),
  *          (SELECT COUNT(*) FROM farmacias), (SELECT MIN(data) FROM precos);
+ *
+ * O total de produtos vem de `precos_atuais` e não de `produtos`: a tabela de
+ * produtos guarda também o que saiu de linha, e "acompanhados" precisa querer
+ * dizer que existe preço vivo — senão o número cresce sozinho com item morto.
  */
 const NUMEROS = [
   { valor: "8", rotulo: "redes monitoradas" },
-  { valor: "106 mil", rotulo: "produtos acompanhados" },
-  { valor: "1,86 mi", rotulo: "mudanças de preço registradas" },
+  { valor: "131 mil", rotulo: "produtos acompanhados" },
+  { valor: "1,94 mi", rotulo: "mudanças de preço registradas" },
   { valor: "jun/2024", rotulo: "início do histórico" },
 ];
 
@@ -94,6 +102,34 @@ const RECURSOS = [
     alt: "Painel de análises com métricas da semana, gráfico de movimento de preços e rosca de aumentos x reduções",
     largura: 1440,
     altura: 900,
+  },
+];
+
+/*
+ * Os três pontos da comparação de tabela.
+ *
+ * A privacidade fecha a lista de propósito: é a objeção que aparece antes de
+ * qualquer outra quando se pede a tabela de preço de uma farmácia, e responder
+ * a ela só depois do login seria responder tarde demais.
+ */
+const COMPARACAO = [
+  {
+    icone: Sparkles,
+    titulo: "Não precisa arrumar o arquivo",
+    texto:
+      "As colunas são identificadas pelo conteúdo, não pelo nome: o código de barras é achado pelo dígito verificador, e custo não é confundido com preço de venda. Separador, acento e vírgula decimal saem do jeito que o seu sistema exportou.",
+  },
+  {
+    icone: TriangleAlert,
+    titulo: "O alerta é quem está fora da mediana",
+    texto:
+      "Cada item é medido contra a mediana das redes que vendem aquele produto. Quando as redes discordam entre si, a linha diz isso em vez de inventar uma referência — e o preço fora de escala aparece riscado, para você ver por que ele não entrou na conta.",
+  },
+  {
+    icone: Lock,
+    titulo: "Seus preços não saem do navegador",
+    texto:
+      "O arquivo é lido na sua máquina. Para o servidor vão só os códigos de barras, para buscar quanto as redes estão cobrando; a comparação acontece na tela e nada da sua tabela é gravado.",
   },
 ];
 
@@ -165,14 +201,22 @@ const Landing = () => {
           />
           <nav className="flex items-center gap-2 sm:gap-4">
             <a
+              href="#tabela"
+              className="hidden text-sm font-medium text-muted-foreground transition-smooth hover:text-foreground sm:block"
+            >
+              Sua tabela
+            </a>
+            <a
               href="#recursos"
               className="hidden text-sm font-medium text-muted-foreground transition-smooth hover:text-foreground sm:block"
             >
               Recursos
             </a>
+            {/* `farmacias` some antes dos outros dois: numa tela estreita cabem
+                dois links ao lado do botão, e este é o menos procurado. */}
             <a
               href="#farmacias"
-              className="hidden text-sm font-medium text-muted-foreground transition-smooth hover:text-foreground sm:block"
+              className="hidden text-sm font-medium text-muted-foreground transition-smooth hover:text-foreground lg:block"
             >
               Farmácias
             </a>
@@ -210,7 +254,8 @@ const Landing = () => {
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
               O PharmaPrice acompanha oito redes todos os dias e guarda cada
               mudança de preço. Busque por nome ou código de barras e veja quem
-              está mais barato — e há quanto tempo.
+              está mais barato — ou suba a sua tabela inteira e descubra de uma
+              vez onde você está fora do mercado.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -218,8 +263,8 @@ const Landing = () => {
                 {rotuloEntrada}
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <a href="#recursos" className={botaoSecundario}>
-                Ver como funciona
+              <a href="#tabela" className={botaoSecundario}>
+                Comparar minha tabela
               </a>
             </div>
           </div>
@@ -281,8 +326,70 @@ const Landing = () => {
           </ul>
         </section>
 
+        {/* Comparar a própria tabela */}
+        <section
+          id="tabela"
+          className="border-y border-border/60 bg-card/40 py-14 sm:py-20"
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-dashboard-primary/30 bg-dashboard-primary/10 px-3 py-1 text-xs font-medium text-dashboard-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Novo
+              </p>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Suba a sua tabela e veja onde você está fora
+              </h2>
+              <p className="mx-auto mt-4 text-base text-muted-foreground">
+                Exporte a lista de preços do seu sistema e jogue o arquivo aqui.
+                Cada item é comparado com o que as oito redes estão cobrando
+                hoje, e o que está acima da mediana aparece em vermelho — com o
+                preço de cada rede na mesma linha, para você ver de quem veio o
+                número.
+              </p>
+            </div>
+
+            <div className="mt-10">
+              <Captura
+                src="/screenshots/comparador.webp"
+                alt="Tela de comparação: 40 itens acima do mercado, 26 abaixo, e a tabela com o preço de cada farmácia linha a linha"
+                largura={1424}
+                altura={900}
+              />
+            </div>
+
+            <div className="mt-12 grid gap-8 sm:grid-cols-3">
+              {COMPARACAO.map(({ icone: Icone, titulo, texto }) => (
+                <div key={titulo}>
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-dashboard-primary/10 text-dashboard-primary">
+                    <Icone className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 font-semibold tracking-tight text-foreground">
+                    {titulo}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{texto}</p>
+                </div>
+              ))}
+            </div>
+
+            <figure className="mt-12">
+              <Captura
+                src="/screenshots/colunas.webp"
+                alt="Etapa de conferência: as colunas COD_BARRAS, PR_VENDA, CUSTO e DESCRICAO foram identificadas sozinhas, com cinco linhas de amostra do arquivo"
+                largura={1424}
+                altura={560}
+              />
+              <figcaption className="mt-3 text-center text-xs text-muted-foreground">
+                O palpite das colunas aparece antes de comparar, com uma amostra
+                do seu arquivo — e você troca qualquer uma que tenha saído
+                errada.
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
         {/* Recursos */}
-        <section id="recursos" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
+        <section id="recursos" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <h2 className="text-center text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             O que dá para fazer
           </h2>
@@ -388,7 +495,8 @@ const Landing = () => {
               Pronto para comparar
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              Entre com sua conta para abrir a busca, o histórico e o painel.
+              Entre com sua conta para abrir a busca, o histórico, o painel e a
+              comparação da sua tabela.
             </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to={destino} className={botaoPrimario}>
@@ -415,7 +523,7 @@ const Landing = () => {
               redes.
             </p>
             <p>
-              Números da base em 15/08/2026. Preços podem variar por loja e
+              Números da base em 16/08/2026. Preços podem variar por loja e
               região.
             </p>
           </div>

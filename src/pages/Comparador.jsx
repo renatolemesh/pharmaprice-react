@@ -35,6 +35,16 @@ import { corDaFarmacia } from "../utils/paletaFarmacias";
 
 const POR_PAGINA = 100;
 
+/*
+ * Linhas mostradas na conferência de colunas.
+ *
+ * É amostra, não recorte do que será comparado — mas a tela precisa DIZER isso.
+ * Sem uma legenda, quem sobe um arquivo de 8 mil linhas e vê três na tela conclui
+ * que só três foram lidas, e o número real ficava só no canto do cartão, num
+ * texto secundário que ninguém liga à tabela logo abaixo.
+ */
+const LINHAS_DE_AMOSTRA = 5;
+
 const ETAPAS = { VAZIO: "vazio", CONFERINDO: "conferindo", BUSCANDO: "buscando", PRONTO: "pronto" };
 
 const PAPEIS = [
@@ -209,6 +219,23 @@ const Comparador = () => {
     ? Object.values(resultado.descartes).reduce((a, b) => a + b, 0)
     : 0;
 
+  /*
+   * Os motivos de descarte como lista montada, e não como texto concatenado.
+   *
+   * Cada motivo carregava a própria vírgula final, então o último sempre saía
+   * com uma vírgula solta — "1 sem código," — e o texto parecia cortado no meio.
+   */
+  const motivos = resultado
+    ? [
+        [resultado.descartes.semEan, "sem código"],
+        [resultado.descartes.eanInvalido, "com código inválido"],
+        [resultado.descartes.notacaoCientifica, "com código destruído pelo Excel (7,89E+12)"],
+        [resultado.descartes.semPreco, "sem preço"],
+      ]
+        .filter(([n]) => n > 0)
+        .map(([n, texto]) => `${n.toLocaleString("pt-BR")} ${texto}`)
+    : [];
+
   return (
     <>
       <PageHeader
@@ -332,8 +359,17 @@ const Comparador = () => {
             )}
 
             {/* Amostra: o jeito mais rápido de a pessoa ver que escolhemos a
-                coluna errada é olhar três linhas de exemplo. */}
-            <div className="mt-4 overflow-x-auto">
+                coluna errada é olhar algumas linhas de exemplo. */}
+            <p className="mt-4 text-xs text-muted-foreground">
+              Amostra das {Math.min(LINHAS_DE_AMOSTRA, arquivo.linhas)} primeiras
+              linhas, só para conferir as colunas.{" "}
+              <strong className="font-medium text-foreground">
+                As {arquivo.linhas.toLocaleString("pt-BR")} linhas do arquivo
+                entram na comparação.
+              </strong>
+            </p>
+
+            <div className="mt-2 overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="text-muted-foreground">
                   <tr>
@@ -348,7 +384,7 @@ const Comparador = () => {
                   </tr>
                 </thead>
                 <tbody className="text-foreground">
-                  {planilha.linhas.slice(0, 3).map((linha, li) => (
+                  {planilha.linhas.slice(0, LINHAS_DE_AMOSTRA).map((linha, li) => (
                     <tr key={`l-${li}`} className="border-t border-border">
                       {planilha.cabecalho.map((_, ci) => (
                           <td key={`c-${li}-${ci}`} className="whitespace-nowrap px-2 py-1">
@@ -464,22 +500,21 @@ const Comparador = () => {
               {descartadas > 0 && (
                 <p>
                   <strong className="text-foreground">
-                    {descartadas.toLocaleString("pt-BR")} linhas
+                    {descartadas.toLocaleString("pt-BR")}{" "}
+                    {descartadas === 1 ? "linha" : "linhas"}
                   </strong>{" "}
-                  do arquivo não entraram:{" "}
-                  {resultado.descartes.semEan > 0 && `${resultado.descartes.semEan} sem código, `}
-                  {resultado.descartes.eanInvalido > 0 &&
-                    `${resultado.descartes.eanInvalido} com código inválido, `}
-                  {resultado.descartes.notacaoCientifica > 0 &&
-                    `${resultado.descartes.notacaoCientifica} com código destruído pelo Excel (7,89E+12), `}
-                  {resultado.descartes.semPreco > 0 && `${resultado.descartes.semPreco} sem preço`}
+                  do arquivo {descartadas === 1 ? "não entrou" : "não entraram"}:{" "}
+                  {motivos.join(", ")}.
                 </p>
               )}
               {resumo.nao_encontrado > 0 && (
                 <p className="mt-1">
-                  {resumo.nao_encontrado.toLocaleString("pt-BR")} produtos não
-                  existem na base monitorada — as redes acompanhadas não vendem
-                  esses itens.
+                  {resumo.nao_encontrado.toLocaleString("pt-BR")}{" "}
+                  {resumo.nao_encontrado === 1
+                    ? "produto não existe"
+                    : "produtos não existem"}{" "}
+                  na base monitorada — as redes acompanhadas não vendem{" "}
+                  {resumo.nao_encontrado === 1 ? "esse item" : "esses itens"}.
                 </p>
               )}
             </div>
