@@ -476,10 +476,16 @@ const Comparador = () => {
                 </tr>
               </thead>
               <tbody>
-                {visiveis.slice(0, 500).map((c) => {
+                {visiveis.slice(0, 500).map((c, linha) => {
                   const situacao = SITUACOES[c.situacao] ?? SITUACOES.alinhado;
                   return (
-                    <tr key={c.ean} className={`border-b border-border/60 ${situacao.fundo}`}>
+                    // A posição entra na chave porque o EAN pode repetir: lista
+                    // com várias lojas traz o mesmo produto uma vez por filial.
+                    // Só o EAN faria o React colidir e reaproveitar linha errada.
+                    <tr
+                      key={`${c.ean}-${linha}`}
+                      className={`border-b border-border/60 ${situacao.fundo}`}
+                    >
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">
                           {c.descricaoBase ?? c.descricao ?? "—"}

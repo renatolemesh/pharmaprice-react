@@ -14,21 +14,54 @@
  */
 
 /**
- * Lê o arquivo tentando UTF-8 e caindo para ISO-8859-1 quando o resultado sai
- * com caracteres de substituição — é o que acontece com export de ERP.
+ * Assinatura de UTF-8 lido como Latin-1.
+ *
+ * Todo acento latino em UTF-8 é um par que começa em `C3` ou `C2`. Lidos como
+ * Latin-1, esses bytes viram `Ã` e `Â`, sempre seguidos de um caractere na
+ * faixa de controle U+0080–U+00BF — que texto de verdade não usa. É daí que sai
+ * o `FarmÃ¡cia` clássico.
+ */
+const MOJIBAKE = /[ÃÂ][\u0080-\u00BF]/g;
+
+/**
+ * Lê o arquivo decidindo entre UTF-8 e ISO-8859-1.
+ *
+ * A primeira versão perguntava se havia ALGUM caractere de substituição na
+ * decodificação UTF-8, e caía para Latin-1 se houvesse. Frágil por construção:
+ * um único byte truncado — um download interrompido no meio de um caractere de
+ * dois bytes — virava o arquivo inteiro, e todo acento passava a aparecer como
+ * `Ã§`. Foi o que aconteceu com um relatório exportado do próprio sistema, que
+ * voltou com `ï»¿FarmÃ¡cia` no cabeçalho.
+ *
+ * Trocar presença por proporção também não resolve: num arquivo de duas linhas,
+ * um byte ruim já é 2% do texto. O que decide de verdade é comparar as duas
+ * leituras e ver qual delas produz mais absurdo — cada uma erra de um jeito
+ * reconhecível, e o jeito de errar é mais informativo que a quantidade.
  */
 export const lerTexto = async (arquivo) => {
   const buffer = await arquivo.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
 
-  const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-  // O caractere de substituição (U+FFFD) só aparece quando a decodificação
-  // falhou de verdade; texto latino legítimo nunca o contém.
-  if (!utf8.includes("�")) {
-    return { texto: utf8, codificacao: "utf-8" };
+  // O BOM decide sozinho: `EF BB BF` só existe em arquivo UTF-8. O
+  // decodificador remove o marcador junto.
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    return { texto: new TextDecoder("utf-8").decode(buffer), codificacao: "utf-8" };
   }
 
+  const utf8 = new TextDecoder("utf-8").decode(buffer);
   const latin = new TextDecoder("iso-8859-1").decode(buffer);
-  return { texto: latin, codificacao: "iso-8859-1" };
+
+  // Ler Latin-1 como UTF-8 gera caractere de substituição; ler UTF-8 como
+  // Latin-1 gera mojibake. Cada leitura é avaliada pelo erro que ela própria
+  // cometeria, e ganha a que erra menos.
+  const erroUtf8 = (utf8.match(/�/g) ?? []).length;
+  const erroLatin = (latin.match(MOJIBAKE) ?? []).length;
+
+  // Empate fica em UTF-8: é o que sai de qualquer sistema atual, e o arquivo
+  // sem nenhum acento (empate em zero) dá o mesmo texto nas duas leituras.
+  return erroLatin < erroUtf8
+    ? { texto: latin, codificacao: "iso-8859-1" }
+    : { texto: utf8, codificacao: "utf-8" };
 };
 
 /**
@@ -92,7 +125,10 @@ export const parsearCsv = (texto, separador) => {
 
   if (linhas.length === 0) return { cabecalho: [], linhas: [] };
 
-  const cabecalho = dividirLinha(linhas[0], separador);
+  // Cinto de segurança para o BOM: se algum caminho de decodificação o deixar
+  // passar, ele gruda no primeiro título — que então não casa com nada, e é
+  // invisível na tela, porque o marcador não tem desenho.
+  const cabecalho = dividirLinha(linhas[0].replace(/^\uFEFF/, ""), separador);
   const corpo = linhas.slice(1).map((l) => dividirLinha(l, separador));
 
   return { cabecalho, linhas: corpo };
