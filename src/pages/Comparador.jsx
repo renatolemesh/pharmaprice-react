@@ -22,11 +22,14 @@ import {
 } from "../utils/planilha";
 import {
   compararComMercado,
+  farmaciasPresentes,
   LIMITE_PADRAO,
   paraCsv,
+  precoNaFarmacia,
   resumirComparacao,
   SITUACOES,
 } from "../utils/comparacao";
+import { corDaFarmacia } from "../utils/paletaFarmacias";
 
 const ETAPAS = { VAZIO: "vazio", CONFERINDO: "conferindo", BUSCANDO: "buscando", PRONTO: "pronto" };
 
@@ -156,8 +159,12 @@ const Comparador = () => {
     [comparados, filtro],
   );
 
+  const farmacias = useMemo(() => farmaciasPresentes(comparados), [comparados]);
+
   const exportar = () => {
-    const blob = new Blob([paraCsv(comparados)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([paraCsv(comparados, farmacias)], {
+      type: "text/csv;charset=utf-8",
+    });
     baixarBlob(blob, "comparacao.csv");
   };
 
@@ -436,14 +443,36 @@ const Comparador = () => {
           )}
 
           <div className="overflow-x-auto rounded-card border border-border bg-card">
-            <table className="w-full text-left text-sm">
+            {/* `min-w` em vez de deixar o navegador espremer: com uma coluna por
+                rede o nome do produto virava cinco linhas de duas palavras. Aqui
+                a tabela rola de lado e cada célula continua legível. */}
+            <table className="w-full min-w-[960px] text-left text-sm">
               <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Produto</th>
+                  <th className="min-w-[280px] px-4 py-3 font-medium">Produto</th>
                   <th className="px-4 py-3 text-right font-medium">Seu preço</th>
                   <th className="px-4 py-3 text-right font-medium">Mediana</th>
-                  <th className="px-4 py-3 text-right font-medium">Faixa</th>
                   <th className="px-4 py-3 text-right font-medium">Desvio</th>
+                  {/* Uma coluna por rede, com a mesma cor que ela tem nos
+                      gráficos. A borda à esquerda separa o seu lado da tabela
+                      do lado do mercado. */}
+                  {farmacias.map((f, i) => (
+                    <th
+                      key={f.id}
+                      className={`px-3 py-3 text-right font-medium whitespace-nowrap ${
+                        i === 0 ? "border-l border-border" : ""
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          aria-hidden="true"
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: corDaFarmacia(f.id) }}
+                        />
+                        {f.nome}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -468,11 +497,6 @@ const Comparador = () => {
                       <td className="px-4 py-3 text-right tabular">
                         {c.mercado?.mediana ? formatCurrency(c.mercado.mediana) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right tabular text-xs text-muted-foreground">
-                        {c.mercado?.minimo
-                          ? `${formatCurrency(c.mercado.minimo)} – ${formatCurrency(c.mercado.maximo)}`
-                          : "—"}
-                      </td>
                       <td className={`px-4 py-3 text-right tabular font-medium ${situacao.classe}`}>
                         {c.desvio === null || c.desvio === undefined ? (
                           <span className="text-xs">{situacao.rotulo}</span>
@@ -480,6 +504,44 @@ const Comparador = () => {
                           `${c.desvio > 0 ? "+" : ""}${c.desvio.toFixed(1)}%`
                         )}
                       </td>
+
+                      {farmacias.map((f, i) => {
+                        const p = precoNaFarmacia(c, f.id);
+                        // Só destaca o menor quando há mediana — num item que a
+                        // API marcou como incoerente, apontar "o mais barato"
+                        // seria dar a conclusão que a linha acabou de dizer que
+                        // não dá para tirar.
+                        const eMenor =
+                          p &&
+                          !p.descartado &&
+                          c.mercado?.mediana !== null &&
+                          c.mercado?.minimo === p.preco;
+
+                        return (
+                          <td
+                            key={f.id}
+                            className={`px-3 py-3 text-right tabular whitespace-nowrap ${
+                              i === 0 ? "border-l border-border" : ""
+                            } ${
+                              p?.descartado
+                                ? // Descartado continua à vista, mas riscado: é a
+                                  // evidência de que o descarte foi certo, e
+                                  // escondê-lo faria a mediana parecer arbitrária.
+                                  "text-muted-foreground/60 line-through"
+                                : eMenor
+                                  ? "font-semibold text-dashboard-success"
+                                  : "text-foreground"
+                            }`}
+                            title={
+                              p?.descartado
+                                ? "Fora de escala — não entrou na mediana"
+                                : undefined
+                            }
+                          >
+                            {p ? formatCurrency(p.preco) : "—"}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}

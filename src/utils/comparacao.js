@@ -119,8 +119,46 @@ export const resumirComparacao = (comparados) => {
   };
 };
 
+/**
+ * Redes que aparecem em pelo menos um item, na ordem do id.
+ *
+ * Pela ordem do id e não pela frequência: é o id que escolhe a cor da rede em
+ * todo o resto do sistema, e uma coluna que troca de lugar conforme o arquivo
+ * obrigaria a reler o cabeçalho a cada comparação.
+ */
+export const farmaciasPresentes = (comparados) => {
+  const mapa = new Map();
+
+  comparados.forEach((c) => {
+    (c.precos ?? []).forEach((p) => {
+      if (!mapa.has(p.farmacia_id)) {
+        mapa.set(p.farmacia_id, { id: p.farmacia_id, nome: p.nome_farmacia });
+      }
+    });
+  });
+
+  return [...mapa.values()].sort((a, b) => a.id - b.id);
+};
+
+/**
+ * O preço de uma rede num item, e se ele entrou na conta.
+ *
+ * Descartado continua visível: quem conhece o produto precisa ver que a rede
+ * publicou aquele valor: é a evidência de que o descarte foi certo.
+ */
+export const precoNaFarmacia = (comparado, farmaciaId) => {
+  const item = (comparado.precos ?? []).find((p) => p.farmacia_id === farmaciaId);
+  if (!item) return null;
+
+  const descartado = (comparado.mercado?.descartados ?? []).some(
+    (d) => d.farmacia_id === farmaciaId,
+  );
+
+  return { preco: item.preco, descartado, link: item.link, urlBase: item.url_base };
+};
+
 /** Linha a linha, no formato que vai para o CSV de saída. */
-export const paraCsv = (comparados) => {
+export const paraCsv = (comparados, farmacias = farmaciasPresentes(comparados)) => {
   const cabecalho = [
     "EAN",
     "Descrição",
@@ -131,6 +169,7 @@ export const paraCsv = (comparados) => {
     "Redes",
     "Desvio %",
     "Situação",
+    ...farmacias.map((f) => f.nome),
   ];
 
   const escapar = (v) => {
@@ -149,6 +188,13 @@ export const paraCsv = (comparados) => {
       c.mercado?.redes ?? "",
       c.desvio !== null && c.desvio !== undefined ? c.desvio.toFixed(1) : "",
       SITUACOES[c.situacao]?.rotulo ?? c.situacao,
+      ...farmacias.map((f) => {
+        const p = precoNaFarmacia(c, f.id);
+        if (!p) return "";
+        // O asterisco marca o preço que ficou de fora da mediana. Exportar sem
+        // essa marca faria a planilha discordar da tela sem explicação.
+        return p.descartado ? `${p.preco.toFixed(2)}*` : p.preco.toFixed(2);
+      }),
     ]
       .map(escapar)
       .join(";"),
