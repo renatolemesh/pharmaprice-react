@@ -10,39 +10,56 @@
 /** Quanto o preço pode se afastar da mediana antes de virar alerta. */
 export const LIMITE_PADRAO = 10;
 
+/*
+ * Cada situação traz o token da sua cor, e não a classe de fundo pronta.
+ *
+ * O fundo da linha precisa ser OPACO, porque a primeira coluna e o cabeçalho
+ * ficam travados e o resto da tabela desliza por baixo deles — com um fundo
+ * translúcido dava para ver o conteúdo passando através da célula fixa. Uma
+ * tinta `/10` do Tailwind não serve; a cor é montada com `color-mix` sobre a
+ * cor do cartão, o que dá o mesmo tom e é opaca. Guardar o token em vez da cor
+ * mantém a troca de tema funcionando.
+ */
 export const SITUACOES = {
   caro: {
     rotulo: "Acima do mercado",
     // Vermelho: é o alerta que a tela existe para dar.
     classe: "text-dashboard-danger",
-    fundo: "bg-dashboard-danger/10",
+    token: "--dashboard-danger",
   },
   barato: {
     rotulo: "Abaixo do mercado",
     classe: "text-dashboard-success",
-    fundo: "bg-dashboard-success/10",
+    token: "--dashboard-success",
   },
   alinhado: {
     rotulo: "Alinhado",
     classe: "text-muted-foreground",
-    fundo: "",
+    token: null,
   },
   divergente: {
     rotulo: "Preços incoerentes entre redes",
     classe: "text-dashboard-warning",
-    fundo: "bg-dashboard-warning/10",
+    token: "--dashboard-warning",
   },
   rede_unica: {
     rotulo: "Só uma rede tem",
     classe: "text-muted-foreground",
-    fundo: "",
+    token: null,
   },
   nao_encontrado: {
     rotulo: "Fora da base",
     classe: "text-muted-foreground",
-    fundo: "",
+    token: null,
   },
 };
+
+/** Fundo opaco da linha, na cor da situação. */
+export const fundoDaLinha = (situacao) => ({
+  backgroundColor: situacao?.token
+    ? `color-mix(in srgb, hsl(var(${situacao.token})) 10%, hsl(var(--card)))`
+    : "hsl(var(--card))",
+});
 
 /**
  * @param itens      linhas lidas da planilha ({ ean, preco, custo, descricao })

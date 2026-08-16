@@ -10,6 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
+import Pagination from "../components/Pagination";
 import { EmptyState, ErrorState } from "../components/ui/feedback";
 import { baixarBlob, fetchMercado, LOTE_MERCADO } from "../services/api";
 import { formatCurrency } from "../utils/format";
@@ -25,11 +26,14 @@ import {
   farmaciasPresentes,
   LIMITE_PADRAO,
   paraCsv,
+  fundoDaLinha,
   precoNaFarmacia,
   resumirComparacao,
   SITUACOES,
 } from "../utils/comparacao";
 import { corDaFarmacia } from "../utils/paletaFarmacias";
+
+const POR_PAGINA = 100;
 
 const ETAPAS = { VAZIO: "vazio", CONFERINDO: "conferindo", BUSCANDO: "buscando", PRONTO: "pronto" };
 
@@ -42,6 +46,16 @@ const PAPEIS = [
 
 const seletor =
   "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition-smooth focus:border-dashboard-primary";
+
+/*
+ * Cabeçalho e células como constantes porque a tabela usa `border-separate`:
+ * com ele a borda da linha não é desenhada, e cada célula precisa carregar a
+ * sua. `border-separate` é necessário para as células fixas — no modo colapsado
+ * a borda pertence à tabela e desaparece por baixo da coluna travada.
+ */
+const cabecalhoBase = "border-b border-border bg-muted py-3 font-medium";
+
+const celulaBase = "border-b border-border/60 px-4 py-3 text-right tabular";
 
 const Cartao = ({ titulo, valor, detalhe, destaque }) => (
   <div className="gradient-card rounded-card border border-border p-4 shadow-card">
@@ -70,7 +84,9 @@ const Comparador = () => {
   const [resultado, setResultado] = useState(null);
   const [limite, setLimite] = useState(LIMITE_PADRAO);
   const [filtro, setFiltro] = useState("todos");
+  const [pagina, setPagina] = useState(1);
   const inputRef = useRef(null);
+  const tabelaRef = useRef(null);
 
   const reiniciar = () => {
     setEtapa(ETAPAS.VAZIO);
@@ -80,6 +96,7 @@ const Comparador = () => {
     setColunas(null);
     setResultado(null);
     setFiltro("todos");
+    setPagina(1);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -160,6 +177,26 @@ const Comparador = () => {
   );
 
   const farmacias = useMemo(() => farmaciasPresentes(comparados), [comparados]);
+
+  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
+
+  /*
+   * A página é derivada, e não guardada por um efeito.
+   *
+   * Trocar o filtro ou o limite muda quantas linhas existem, e a página 7 de
+   * um recorte pode não existir no próximo. Corrigir isso com um efeito que
+   * chama setPagina causaria um render a mais mostrando a tabela vazia antes de
+   * consertar; limitar aqui a resposta já sai certa de primeira.
+   */
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const daPagina = visiveis.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
+
+  const irPara = (destino) => {
+    setPagina(destino);
+    // O cabeçalho fica no topo do contêiner, não da página: sem isto, mudar de
+    // página mantém a rolagem no meio da tabela anterior.
+    tabelaRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const exportar = () => {
     const blob = new Blob([paraCsv(comparados, farmacias)], {
@@ -396,14 +433,20 @@ const Comparador = () => {
               min="1"
               max="90"
               value={limite}
-              onChange={(e) => setLimite(Math.max(1, Number(e.target.value) || 1))}
+              onChange={(e) => {
+                setLimite(Math.max(1, Number(e.target.value) || 1));
+                setPagina(1);
+              }}
               className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular"
             />
             <span className="text-sm text-muted-foreground">% de desvio</span>
 
             <select
               value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
+              onChange={(e) => {
+                setFiltro(e.target.value);
+                setPagina(1);
+              }}
               className={`${seletor} ml-auto w-auto`}
             >
               <option value="todos">Todos ({resumo.total})</option>
@@ -442,24 +485,37 @@ const Comparador = () => {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-card border border-border bg-card">
+          {/*
+            Altura limitada e rolagem nos dois eixos no MESMO elemento.
+            `position: sticky` gruda no scrollport mais próximo, então cabeçalho
+            e coluna fixa só funcionam se quem rola for este contêiner. Deixar a
+            página rolar faria o cabeçalho subir junto e sumir — que é
+            exatamente o problema a resolver.
+          */}
+          <div
+            ref={tabelaRef}
+            className="max-h-[70vh] overflow-auto rounded-card border border-border bg-card"
+          >
             {/* `min-w` em vez de deixar o navegador espremer: com uma coluna por
-                rede o nome do produto virava cinco linhas de duas palavras. Aqui
-                a tabela rola de lado e cada célula continua legível. */}
-            <table className="w-full min-w-[960px] text-left text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                rede o nome do produto virava cinco linhas de duas palavras. */}
+            <table className="w-full min-w-[960px] border-separate border-spacing-0 text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="min-w-[280px] px-4 py-3 font-medium">Produto</th>
-                  <th className="px-4 py-3 text-right font-medium">Seu preço</th>
-                  <th className="px-4 py-3 text-right font-medium">Mediana</th>
-                  <th className="px-4 py-3 text-right font-medium">Desvio</th>
+                  {/* z-30 no canto: ele é fixo nos dois eixos e precisa ficar
+                      acima do cabeçalho e da coluna de produto. */}
+                  <th className={`${cabecalhoBase} sticky left-0 top-0 z-30 min-w-[280px] px-4 text-left`}>
+                    Produto
+                  </th>
+                  <th className={`${cabecalhoBase} sticky top-0 z-20 px-4 text-right`}>Seu preço</th>
+                  <th className={`${cabecalhoBase} sticky top-0 z-20 px-4 text-right`}>Mediana</th>
+                  <th className={`${cabecalhoBase} sticky top-0 z-20 px-4 text-right`}>Desvio</th>
                   {/* Uma coluna por rede, com a mesma cor que ela tem nos
                       gráficos. A borda à esquerda separa o seu lado da tabela
                       do lado do mercado. */}
                   {farmacias.map((f, i) => (
                     <th
                       key={f.id}
-                      className={`px-3 py-3 text-right font-medium whitespace-nowrap ${
+                      className={`${cabecalhoBase} sticky top-0 z-20 whitespace-nowrap px-3 text-right ${
                         i === 0 ? "border-l border-border" : ""
                       }`}
                     >
@@ -476,17 +532,17 @@ const Comparador = () => {
                 </tr>
               </thead>
               <tbody>
-                {visiveis.slice(0, 500).map((c, linha) => {
+                {daPagina.map((c, linha) => {
                   const situacao = SITUACOES[c.situacao] ?? SITUACOES.alinhado;
                   return (
                     // A posição entra na chave porque o EAN pode repetir: lista
                     // com várias lojas traz o mesmo produto uma vez por filial.
                     // Só o EAN faria o React colidir e reaproveitar linha errada.
-                    <tr
-                      key={`${c.ean}-${linha}`}
-                      className={`border-b border-border/60 ${situacao.fundo}`}
-                    >
-                      <td className="px-4 py-3">
+                    <tr key={`${c.ean}-${linha}`} style={fundoDaLinha(situacao)}>
+                      {/* `bg-inherit` puxa o fundo OPACO da linha: sem ele a
+                          célula fixa seria transparente e as colunas de preço
+                          apareceriam deslizando por baixo do nome do produto. */}
+                      <td className="sticky left-0 z-10 border-b border-r border-border/60 bg-inherit px-4 py-3 text-left">
                         <p className="font-medium text-foreground">
                           {c.descricaoBase ?? c.descricao ?? "—"}
                         </p>
@@ -497,13 +553,13 @@ const Comparador = () => {
                             ` · ${c.mercado.descartados[0].nome_farmacia} descartada (preço fora de escala)`}
                         </p>
                       </td>
-                      <td className="px-4 py-3 text-right tabular font-medium">
+                      <td className={`${celulaBase} font-medium`}>
                         {formatCurrency(c.preco)}
                       </td>
-                      <td className="px-4 py-3 text-right tabular">
+                      <td className={celulaBase}>
                         {c.mercado?.mediana ? formatCurrency(c.mercado.mediana) : "—"}
                       </td>
-                      <td className={`px-4 py-3 text-right tabular font-medium ${situacao.classe}`}>
+                      <td className={`${celulaBase} font-medium ${situacao.classe}`}>
                         {c.desvio === null || c.desvio === undefined ? (
                           <span className="text-xs">{situacao.rotulo}</span>
                         ) : (
@@ -526,7 +582,7 @@ const Comparador = () => {
                         return (
                           <td
                             key={f.id}
-                            className={`px-3 py-3 text-right tabular whitespace-nowrap ${
+                            className={`${celulaBase} whitespace-nowrap px-3 ${
                               i === 0 ? "border-l border-border" : ""
                             } ${
                               p?.descartado
@@ -555,12 +611,12 @@ const Comparador = () => {
             </table>
           </div>
 
-          {visiveis.length > 500 && (
-            <p className="text-center text-xs text-muted-foreground">
-              Mostrando as primeiras 500 de {visiveis.length.toLocaleString("pt-BR")}.
-              O arquivo exportado traz todas.
-            </p>
-          )}
+          <Pagination
+            currentPage={paginaAtual}
+            totalPages={totalPaginas}
+            total={visiveis.length}
+            onPageChange={irPara}
+          />
 
           {visiveis.length === 0 && (
             <EmptyState
